@@ -1,0 +1,65 @@
+/*
+ * Everything print. The editor DOM is the print DOM, so this file's job is to
+ * take away the app chrome and leave the table.
+ */
+
+@page {
+  size: A4 portrait;
+  margin: 15mm 12mm;
+}
+
+@media print {
+  :root {
+    font-size: 10pt;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  /* Toolbars, row and column controls, validation hints: none of it prints. */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Inputs print as plain text, without the box they are edited in. */
+  input,
+  textarea,
+  select {
+    border: none;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    resize: none;
+    appearance: none;
+  }
+
+  .cell-invalid {
+    background: transparent;
+    outline: none;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  /* The column headers repeat on every page on their own; the document header
+     block above the table deliberately stays on page one. */
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  th,
+  td {
+    border: 0.5pt solid #000;
+    padding: 1.5mm 2mm;
+    vertical-align: top;
+  }
+}
