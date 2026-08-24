@@ -44,9 +44,23 @@ test('print media hides the app chrome and keeps the table', async ({ page }) =>
 
   await expect(page.getByRole('button', { name: 'Drucken' })).toBeHidden()
   await expect(page.getByRole('button', { name: 'Zeile hinzufügen' })).toBeHidden()
-  await expect(page.getByRole('heading', { name: 'Spalten' })).toBeHidden()
+  await expect(page.getByTitle('Spalte hinzufügen')).toBeHidden()
+  await expect(page.getByTitle('Spalte verschieben').first()).toBeHidden()
   await expect(page.locator('table')).toBeVisible()
   await expect(page.locator('tbody .time-column').first()).toHaveText('09:00')
+
+  // The header prints as bare text, without the editing chrome around it.
+  await expect(page.locator('thead th').nth(2)).toHaveText('Dauer', { useInnerText: true })
+})
+
+test('an unnamed column prints as a blank header', async ({ page }) => {
+  await openNewDocument(page)
+  await page.getByTitle('Spalte hinzufügen').click()
+  await expect(page.getByLabel('Spaltenname')).toBeVisible()
+
+  await page.emulateMedia({ media: 'print' })
+
+  await expect(page.locator('thead th').nth(5)).toHaveText('', { useInnerText: true })
 })
 
 test('the page renders onto A4 as a PDF', async ({ page }) => {
@@ -93,14 +107,92 @@ test('a dropdown column offers the values of its list', async ({ page }) => {
   await page.getByRole('button', { name: 'Zurück' }).click()
 
   await page.getByRole('button', { name: 'Neues Dokument' }).click()
-  await page.getByPlaceholder('Spaltenname').fill('Ort')
-  await page.getByLabel('Typ').last().selectOption('select')
-  await page.getByRole('button', { name: 'Spalte hinzufügen' }).click()
+  await page.getByTitle('Spalte hinzufügen').click()
+  await page.getByLabel('Spaltenname').fill('Ort')
+  await page.getByLabel('Typ').selectOption('select')
   await page.getByLabel('Liste').selectOption({ label: 'Räume' })
 
   const cell = page.locator('tbody tr:nth-child(1) td[data-column-type="select"] select')
   await cell.selectOption('Saal')
   await expect(cell).toHaveValue('Saal')
+})
+
+test('columns can be dragged into a new order', async ({ page }) => {
+  await openNewDocument(page)
+
+  const headings = page.locator('thead .column-name')
+  await expect(headings).toHaveText(['Uhrzeit', 'Programmpunkt', 'Verantwortlich'])
+
+  const handle = page.locator('thead th:nth-child(5) .drag-handle')
+  const target = page.locator('thead th:nth-child(4)')
+  const from = (await handle.boundingBox())!
+  const to = (await target.boundingBox())!
+
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
+  await page.screenshot({ path: 'test-results/column-drag-midway.png' })
+  await page.mouse.up()
+
+  await expect(headings).toHaveText(['Uhrzeit', 'Verantwortlich', 'Programmpunkt'])
+})
+
+test('dragging the start time moves the duration column with it', async ({ page }) => {
+  await openNewDocument(page)
+  await page.fill(durationInput(1), '15')
+
+  const handle = page.locator('thead th:nth-child(2) .drag-handle')
+  const target = page.locator('thead th:nth-child(5)')
+  const from = (await handle.boundingBox())!
+  const to = (await target.boundingBox())!
+
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
+  await page.mouse.up()
+
+  // The pair moved together and stayed adjacent, time first.
+  const headings = page.locator('thead th')
+  await expect(page.locator('thead .column-name').first()).not.toHaveText('Uhrzeit')
+  await expect(page.locator('thead .time-column')).toHaveCount(1)
+  await expect(headings.nth(3)).toContainText('Uhrzeit')
+  await expect(headings.nth(4)).toHaveText('Dauer')
+  await expect(page.locator('tbody .time-column')).toHaveText(['09:00'])
+})
+
+test('deleting the start time takes the duration column with it', async ({ page }) => {
+  await openNewDocument(page)
+
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.locator('thead .column-name').first().click()
+  await page.getByRole('button', { name: 'Spalte löschen' }).click()
+
+  await expect(page.locator('thead .column-name')).toHaveText([
+    'Programmpunkt',
+    'Verantwortlich',
+  ])
+  await expect(page.locator('.time-column')).toHaveCount(0)
+  await expect(page.locator('td[data-column-type="duration"]')).toHaveCount(0)
+})
+
+test('one column drag costs one undo step', async ({ page }) => {
+  await openNewDocument(page)
+
+  const headings = page.locator('thead .column-name')
+  const handle = page.locator('thead th:nth-child(5) .drag-handle')
+  const target = page.locator('thead th:nth-child(4)')
+  const from = (await handle.boundingBox())!
+  const to = (await target.boundingBox())!
+
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
+  await page.mouse.up()
+  await expect(headings).toHaveText(['Uhrzeit', 'Verantwortlich', 'Programmpunkt'])
+
+  await page.getByRole('button', { name: 'Rückgängig' }).click()
+
+  await expect(headings).toHaveText(['Uhrzeit', 'Programmpunkt', 'Verantwortlich'])
 })
 
 test('rows can be dragged into a new order', async ({ page }) => {

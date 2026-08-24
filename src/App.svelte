@@ -1,5 +1,4 @@
 <script lang="ts">
-  import ColumnEditor from './lib/ColumnEditor.svelte'
   import DocumentList from './lib/DocumentList.svelte'
   import HeaderFieldsEditor from './lib/HeaderFieldsEditor.svelte'
   import ListManager from './lib/ListManager.svelte'
@@ -17,6 +16,7 @@
   let view = $state<View>('documents')
   let currentId = $state<string | null>(null)
   let saveFailed = $state(false)
+  let dragging = $state(false)
 
   const history = createHistory()
   let lastKey = ''
@@ -40,9 +40,11 @@
     saveFailed = !saveStore($state.snapshot(store))
   })
 
+  // A drag rewrites the order on every pointer move. Recording is held off
+  // until the drop, so one drag costs one undo step instead of a dozen.
   $effect(() => {
     const document = store.documents[currentIndex]
-    if (!document) return
+    if (!document || dragging) return
 
     const key = changeKey(document)
     if (key === lastKey) return
@@ -167,8 +169,11 @@
     </header>
 
     <HeaderFieldsEditor bind:plan={store.documents[currentIndex]} />
-    <ColumnEditor bind:plan={store.documents[currentIndex]} lists={store.lists} />
-    <ScheduleTable bind:plan={store.documents[currentIndex]} lists={store.lists} />
+    <ScheduleTable
+      bind:plan={store.documents[currentIndex]}
+      lists={store.lists}
+      ondragstatechange={(active) => (dragging = active)}
+    />
   {/if}
 </main>
 

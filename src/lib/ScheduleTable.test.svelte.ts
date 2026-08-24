@@ -1,0 +1,177 @@
+import { fireEvent, render, screen } from '@testing-library/svelte'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import ScheduleTable from './ScheduleTable.svelte'
+import { createDocument, findDurationColumn } from './document'
+import { createList } from './lists'
+import type { SelectList } from './types'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+function renderTable(lists: SelectList[] = []) {
+  const plan = $state(createDocument('Ablauf'))
+  render(ScheduleTable, { props: { plan, lists } })
+  return plan
+}
+
+function headerNames(): string[] {
+  return screen
+    .getAllByTitle('Spalte bearbeiten')
+    .map((button) => button.textContent?.trim() ?? '')
+}
+
+async function openSettings(name: string): Promise<void> {
+  const button = screen
+    .getAllByTitle('Spalte bearbeiten')
+    .find((it) => it.textContent?.trim() === name)
+  if (!button) throw new Error(`no column header named ${name}`)
+  await fireEvent.click(button)
+}
+
+describe('column headers', () => {
+  it('adds an unnamed column at the end and opens its settings', async () => {
+    const plan = renderTable()
+
+    await fireEvent.click(screen.getByTitle('Spalte hinzufügen'))
+
+    expect(plan.columns.at(-1)!.title).toBe('')
+    expect(plan.columns.at(-1)!.type).toBe('text')
+    expect(headerNames()).toEqual(['Uhrzeit', 'Programmpunkt', 'Verantwortlich', 'Spaltenname'])
+    expect(screen.getByLabelText('Spaltenname')).toBeTruthy()
+  })
+
+  it('gives every row a cell for the new column', async () => {
+    const plan = renderTable()
+
+    await fireEvent.click(screen.getByTitle('Spalte hinzufügen'))
+
+    const added = plan.columns.at(-1)!
+    expect(plan.rows.every((row) => added.id in row.cells)).toBe(true)
+  })
+
+  it('renames the column as it is typed', async () => {
+    const plan = renderTable()
+    await fireEvent.click(screen.getByTitle('Spalte hinzufügen'))
+
+    await fireEvent.input(screen.getByLabelText('Spaltenname'), { target: { value: 'Ort' } })
+
+    expect(plan.columns.at(-1)!.title).toBe('Ort')
+    expect(headerNames()).toEqual(['Uhrzeit', 'Programmpunkt', 'Verantwortlich', 'Ort'])
+  })
+
+  it('refuses a second duration column and says why', async () => {
+    const plan = renderTable()
+    await fireEvent.click(screen.getByTitle('Spalte hinzufügen'))
+
+    const type = screen.getByLabelText('Typ') as HTMLSelectElement
+    const duration = [...type.options].find((option) => option.value === 'duration')!
+    expect(duration.disabled).toBe(true)
+    expect(screen.getByText('Es kann nur eine Dauer-Spalte geben.')).toBeTruthy()
+    expect(plan.columns.filter((column) => column.type === 'duration')).toHaveLength(1)
+  })
+
+  it('lets a column become a duration column once the first one is gone', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const plan = renderTable()
+
+    await openSettings('Uhrzeit')
+    await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+    await openSettings('Programmpunkt')
+    await fireEvent.change(screen.getByLabelText('Typ'), { target: { value: 'duration' } })
+
+    expect(findDurationColumn(plan.columns)?.title).toBe('Programmpunkt')
+  })
+
+  it('offers the user lists once a column is a dropdown', async () => {
+    const list = createList('Räume')
+    const plan = renderTable([list])
+
+    await openSettings('Verantwortlich')
+    await fireEvent.change(screen.getByLabelText('Typ'), { target: { value: 'select' } })
+    await fireEvent.change(screen.getByLabelText('Liste'), { target: { value: list.id } })
+
+    expect(plan.columns.find((column) => column.title === 'Verantwortlich')?.listId).toBe(list.id)
+  })
+
+  it('deletes a column with its cells once confirmed', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const plan = renderTable()
+    const doomed = plan.columns.find((column) => column.title === 'Verantwortlich')!
+
+    await openSettings('Verantwortlich')
+    await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+
+    expect(headerNames()).toEqual(['Uhrzeit', 'Programmpunkt'])
+    expect(plan.rows.every((row) => !(doomed.id in row.cells))).toBe(true)
+  })
+
+  it('keeps the column when the confirmation is declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const plan = renderTable()
+
+    await openSettings('Verantwortlich')
+    await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+
+    expect(plan.columns).toHaveLength(3)
+  })
+
+  it('closes the settings on Escape', async () => {
+    renderTable()
+    await fireEvent.click(screen.getByTitle('Spalte hinzufügen'))
+    expect(screen.queryByLabelText('Typ')).toBeTruthy()
+
+    await fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(screen.queryByLabelText('Typ')).toBeNull()
+  })
+
+  it('renders the start-time column directly in front of the duration column', () => {
+    const plan = renderTable()
+    const headings = [...document.querySelectorAll('thead th')].map(
+      (cell) => cell.textContent?.trim() ?? '',
+    )
+
+    expect(plan.columns[0].type).toBe('duration')
+    expect(headings[1]).toContain('Uhrzeit')
+    expect(headings[2]).toBe('Dauer')
+  })
+})
+
+describe('the time group', () => {
+  it('puts the controls on the start-time cell, not on the duration cell', () => {
+    renderTable()
+
+    expect(headerNames()).toEqual(['Uhrzeit', 'Programmpunkt', 'Verantwortlich'])
+    expect(document.querySelectorAll('thead .drag-handle')).toHaveLength(3)
+  })
+
+  it('edits the duration column through the start-time settings', async () => {
+    const plan = renderTable()
+
+    await openSettings('Uhrzeit')
+
+    expect((screen.getByLabelText('Spaltenname') as HTMLInputElement).value).toBe('Dauer')
+    await fireEvent.input(screen.getByLabelText('Spaltenname'), { target: { value: 'Länge' } })
+    expect(findDurationColumn(plan.columns)?.title).toBe('Länge')
+  })
+
+  it('deletes the pair together', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const plan = renderTable()
+
+    await openSettings('Uhrzeit')
+    await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+
+    expect(findDurationColumn(plan.columns)).toBeUndefined()
+    expect(document.querySelector('.time-column')).toBeNull()
+    expect(headerNames()).toEqual(['Programmpunkt', 'Verantwortlich'])
+  })
+
+  it('draws a faint divider inside the group and a normal one around it', () => {
+    renderTable()
+
+    expect(document.querySelector('thead .time-column')?.classList).toContain('group-start')
+    expect(document.querySelectorAll('.group-end')).toHaveLength(2)
+  })
+})

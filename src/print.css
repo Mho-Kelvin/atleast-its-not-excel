@@ -41,6 +41,15 @@
     outline: none;
   }
 
+  /* The column name is a button on screen. It prints as the heading text. */
+  .column-name {
+    border: none;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;

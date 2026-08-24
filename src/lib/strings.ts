@@ -1,5 +1,3 @@
-import type { AriaStrings } from 'svelte-dnd-action'
-
 /** Every user-visible string in the app. Nothing German belongs outside this file. */
 export const strings = {
   appTitle: 'Ablaufplan',
@@ -14,6 +12,7 @@ export const strings = {
   addRow: 'Zeile hinzufügen',
   removeRow: 'Zeile löschen',
   dragRow: 'Zeile verschieben',
+  dragColumn: 'Spalte verschieben',
   print: 'Drucken',
   undo: 'Rückgängig',
   redo: 'Wiederholen',
@@ -29,15 +28,13 @@ export const strings = {
   lastChanged: 'Zuletzt geändert',
   confirmDeleteDocument: 'Dieses Dokument endgültig löschen?',
 
-  columns: 'Spalten',
   addColumn: 'Spalte hinzufügen',
   removeColumn: 'Spalte löschen',
+  columnSettings: 'Spalte bearbeiten',
   columnTitleLabel: 'Spaltenname',
   columnTypeLabel: 'Typ',
   columnListLabel: 'Liste',
   noListChosen: 'Keine Liste',
-  moveColumnUp: 'Spalte nach vorn',
-  moveColumnDown: 'Spalte nach hinten',
   durationColumnTaken: 'Es kann nur eine Dauer-Spalte geben.',
   confirmDeleteColumn: 'Diese Spalte mit allen Inhalten löschen?',
 
@@ -66,13 +63,17 @@ export const strings = {
   },
 } as const
 
-/** What the drag-and-drop library reads out to screen readers. English by default. */
-export const dragAriaStrings: AriaStrings = {
-  dragStarted: ({ position, count }) => `Zeile aufgenommen, Position ${position} von ${count}.`,
-  movedToPosition: ({ position, count }) => `Position ${position} von ${count}.`,
-  movedToZoneStart: () => 'An den Anfang verschoben.',
-  movedToZoneEnd: () => 'An das Ende verschoben.',
-  dropped: ({ position, count }) => `Abgelegt auf Position ${position} von ${count}.`,
-  zoneActiveInstruction:
-    'Mit den Pfeiltasten verschieben, mit Leertaste oder Enter ablegen, mit Escape abbrechen.',
+/**
+ * Spoken while dragging. The library's own announcements are switched off,
+ * because it also overwrites the table's roles with list semantics and it
+ * counts the fixed header cells as if they were columns.
+ */
+export const dragAnnouncements = {
+  columnMoved: (name: string, position: number, count: number) =>
+    `Spalte ${name}, Position ${position} von ${count}.`,
+  columnDropped: (name: string, position: number, count: number) =>
+    `Spalte ${name} abgelegt auf Position ${position} von ${count}.`,
+  rowMoved: (position: number, count: number) => `Zeile, Position ${position} von ${count}.`,
+  rowDropped: (position: number, count: number) =>
+    `Zeile abgelegt auf Position ${position} von ${count}.`,
 }
