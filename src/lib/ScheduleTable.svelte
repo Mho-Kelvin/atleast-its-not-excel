@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action'
   import { createRow, findDurationColumn } from './document'
   import { parseDuration } from './duration'
+  import { listValues } from './lists'
   import { computeStartTimes, formatTimeOfDay, parseTimeOfDay } from './schedule'
   import { strings } from './strings'
-  import type { ScheduleDocument, SelectList } from './types'
+  import type { Row, ScheduleDocument, SelectList } from './types'
 
   let { plan = $bindable(), lists }: { plan: ScheduleDocument; lists: SelectList[] } = $props()
 
@@ -21,10 +23,6 @@
     return text.trim() !== '' && parseDuration(text) === null
   }
 
-  function valuesOf(listId: string | undefined): string[] {
-    return lists.find((list) => list.id === listId)?.values ?? []
-  }
-
   function addRow(): void {
     plan.rows.push(createRow(plan.columns))
   }
@@ -35,11 +33,16 @@
       addRow()
     }
   }
+
+  function onRowsReordered(event: CustomEvent<DndEvent<Row>>): void {
+    plan.rows = event.detail.items
+  }
 </script>
 
 <table>
   <thead>
     <tr>
+      <th class="no-print handle-column"></th>
       {#if durationColumn}
         <th class="time-column">{strings.startTimeColumn}</th>
       {/if}
@@ -49,9 +52,21 @@
       <th class="no-print"></th>
     </tr>
   </thead>
-  <tbody>
+  <tbody
+    use:dragHandleZone={{ items: plan.rows, flipDurationMs: 0 }}
+    onconsider={onRowsReordered}
+    onfinalize={onRowsReordered}
+  >
     {#each plan.rows as row, rowIndex (row.id)}
       <tr>
+        <td class="no-print handle-column">
+          <span
+            use:dragHandle
+            class="drag-handle"
+            title={strings.dragRow}
+            aria-label={strings.dragRow}>⠿</span
+          >
+        </td>
         {#if durationColumn}
           <td class="time-column">
             {startTimes[rowIndex] === null || startTimes[rowIndex] === undefined
@@ -66,7 +81,7 @@
             {:else if column.type === 'select'}
               <select bind:value={row.cells[column.id]}>
                 <option value=""></option>
-                {#each valuesOf(column.listId) as value (value)}
+                {#each listValues(lists, column.listId) as value (value)}
                   <option {value}>{value}</option>
                 {/each}
               </select>
@@ -114,6 +129,16 @@
   .time-column {
     width: 6ch;
     white-space: nowrap;
+  }
+
+  .handle-column {
+    width: 2ch;
+  }
+
+  .drag-handle {
+    cursor: grab;
+    color: #888;
+    user-select: none;
   }
 
   input,

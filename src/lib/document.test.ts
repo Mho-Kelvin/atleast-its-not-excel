@@ -4,8 +4,11 @@ import {
   canAddColumnType,
   createColumn,
   createDocument,
+  createHeaderField,
   createRow,
+  duplicateDocument,
   findDurationColumn,
+  moveColumn,
   removeColumn,
 } from './document'
 
@@ -41,6 +44,68 @@ describe('addColumn and removeColumn', () => {
 
     removeColumn(document, column.id)
     expect(column.id in document.rows[0].cells).toBe(false)
+  })
+})
+
+describe('moveColumn', () => {
+  it('swaps a column with its neighbour', () => {
+    const document = createDocument('Ablauf')
+    const titles = document.columns.map((column) => column.title)
+
+    moveColumn(document, 0, 1)
+
+    expect(document.columns.map((column) => column.title)).toEqual([
+      titles[1],
+      titles[0],
+      titles[2],
+    ])
+  })
+
+  it('does nothing at either end', () => {
+    const document = createDocument('Ablauf')
+    const before = document.columns.map((column) => column.id)
+
+    moveColumn(document, 0, -1)
+    moveColumn(document, document.columns.length - 1, 1)
+
+    expect(document.columns.map((column) => column.id)).toEqual(before)
+  })
+})
+
+describe('duplicateDocument', () => {
+  it('copies the cell contents', () => {
+    const source = createDocument('Ablauf')
+    const durationColumn = findDurationColumn(source.columns)!
+    source.rows[0].cells[durationColumn.id] = '15'
+
+    const copy = duplicateDocument(source, 'Ablauf (Kopie)')
+    const copiedDuration = findDurationColumn(copy.columns)!
+
+    expect(copy.title).toBe('Ablauf (Kopie)')
+    expect(copy.rows[0].cells[copiedDuration.id]).toBe('15')
+  })
+
+  it('shares no ids with the original', () => {
+    const source = createDocument('Ablauf')
+    source.headerFields.push(createHeaderField('Ort'))
+    const copy = duplicateDocument(source, 'Kopie')
+
+    expect(copy.id).not.toBe(source.id)
+    expect(copy.rows[0].id).not.toBe(source.rows[0].id)
+    expect(copy.headerFields[0].id).not.toBe(source.headerFields[0].id)
+    for (const column of copy.columns) {
+      expect(source.columns.some((original) => original.id === column.id)).toBe(false)
+    }
+  })
+
+  it('leaves the original untouched when the copy is edited', () => {
+    const source = createDocument('Ablauf')
+    const copy = duplicateDocument(source, 'Kopie')
+    const copiedColumn = copy.columns[0]
+
+    copy.rows[0].cells[copiedColumn.id] = 'geändert'
+
+    expect(Object.values(source.rows[0].cells)).toEqual(['', '', ''])
   })
 })
 
