@@ -175,3 +175,73 @@ describe('the time group', () => {
     expect(document.querySelectorAll('.group-end')).toHaveLength(2)
   })
 })
+
+describe('print visibility', () => {
+  it('prints every column until one is switched off', () => {
+    const plan = renderTable()
+
+    expect(plan.columns.every((column) => column.hideInPrint === undefined)).toBe(true)
+    expect(plan.hideTimeInPrint).toBeUndefined()
+    expect(document.querySelectorAll('.print-hidden')).toHaveLength(0)
+  })
+
+  it('marks the header and every cell of a column switched off', async () => {
+    const plan = renderTable()
+
+    await openSettings('Verantwortlich')
+    await fireEvent.click(screen.getByLabelText('Spalte drucken'))
+
+    const column = plan.columns.find((it) => it.title === 'Verantwortlich')!
+    expect(column.hideInPrint).toBe(true)
+    expect(document.querySelectorAll('tbody td.print-hidden')).toHaveLength(plan.rows.length)
+
+    const heading = document.querySelector('thead th.print-hidden')
+    expect(heading?.textContent).toContain('Verantwortlich')
+    expect(heading?.querySelector('.print-mark')).toBeTruthy()
+  })
+
+  it('switches a column back on', async () => {
+    const plan = renderTable()
+
+    await openSettings('Verantwortlich')
+    await fireEvent.click(screen.getByLabelText('Spalte drucken'))
+    await fireEvent.click(screen.getByLabelText('Spalte drucken'))
+
+    expect(plan.columns.find((it) => it.title === 'Verantwortlich')!.hideInPrint).toBe(false)
+    expect(document.querySelectorAll('.print-hidden')).toHaveLength(0)
+  })
+
+  it('hides the start time without touching the duration column', async () => {
+    const plan = renderTable()
+
+    await openSettings('Uhrzeit')
+    await fireEvent.click(screen.getByLabelText('Uhrzeit drucken'))
+
+    expect(plan.hideTimeInPrint).toBe(true)
+    expect(findDurationColumn(plan.columns)!.hideInPrint).toBeUndefined()
+    expect(document.querySelector('thead .time-column')?.classList).toContain('print-hidden')
+    expect(document.querySelector('thead .group-end')?.classList).not.toContain('print-hidden')
+  })
+
+  it('hides the duration column without touching the start time', async () => {
+    const plan = renderTable()
+
+    await openSettings('Uhrzeit')
+    await fireEvent.click(screen.getByLabelText('Dauer drucken'))
+
+    expect(findDurationColumn(plan.columns)!.hideInPrint).toBe(true)
+    expect(plan.hideTimeInPrint).toBeUndefined()
+    expect(document.querySelector('thead .time-column')?.classList).not.toContain('print-hidden')
+    expect(document.querySelector('thead .group-end')?.classList).toContain('print-hidden')
+  })
+
+  it('offers a plain column one toggle, not the pair', async () => {
+    renderTable()
+
+    await openSettings('Programmpunkt')
+
+    expect(screen.getByLabelText('Spalte drucken')).toBeTruthy()
+    expect(screen.queryByLabelText('Uhrzeit drucken')).toBeNull()
+    expect(screen.queryByLabelText('Dauer drucken')).toBeNull()
+  })
+})

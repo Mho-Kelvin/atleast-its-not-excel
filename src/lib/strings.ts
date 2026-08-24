@@ -36,6 +36,10 @@ export const strings = {
   columnListLabel: 'Liste',
   noListChosen: 'Keine Liste',
   durationColumnTaken: 'Es kann nur eine Dauer-Spalte geben.',
+  printColumn: 'Spalte drucken',
+  printTime: 'Uhrzeit drucken',
+  printDuration: 'Dauer drucken',
+  notPrinted: 'Wird nicht gedruckt',
   confirmDeleteColumn: 'Diese Spalte mit allen Inhalten löschen?',
 
   lists: 'Auswahllisten',

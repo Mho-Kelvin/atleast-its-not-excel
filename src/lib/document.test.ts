@@ -199,6 +199,18 @@ describe('duplicateDocument', () => {
     }
   })
 
+  it('carries the print settings over', () => {
+    const source = createDocument('Ablauf')
+    source.hideTimeInPrint = true
+    source.columns[1].hideInPrint = true
+
+    const copy = duplicateDocument(source, 'Kopie')
+
+    expect(copy.hideTimeInPrint).toBe(true)
+    expect(copy.columns[1].hideInPrint).toBe(true)
+    expect(copy.columns[2].hideInPrint).toBeUndefined()
+  })
+
   it('leaves the original untouched when the copy is edited', () => {
     const source = createDocument('Ablauf')
     const copy = duplicateDocument(source, 'Kopie')

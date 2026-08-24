@@ -23,6 +23,25 @@
     display: none !important;
   }
 
+  /* A column the user switched off. The cell stays in the DOM: both drag zones
+     map one DOM child per item, and a missing cell would shift every index. */
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* The dashed divider only makes sense while both halves of the time group
+     print. When one is switched off, the survivor's edge goes back to normal.
+     display:none leaves the cell in the tree, so these still match. */
+  .print-hidden + th,
+  .print-hidden + td {
+    border-left: 0.5pt solid #000 !important;
+  }
+
+  th:has(+ .print-hidden),
+  td:has(+ .print-hidden) {
+    border-right: 0.5pt solid #000 !important;
+  }
+
   /* Inputs print as plain text, without the box they are edited in. */
   input,
   textarea,

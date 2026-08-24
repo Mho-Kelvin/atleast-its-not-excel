@@ -226,8 +226,8 @@
         {:else if slot.id === TIME_SLOT.id}
           <!-- The start time carries the controls for the whole time group:
                grabbing or deleting it takes the duration column with it. -->
-          <th class="time-column group-start">
-            {@render columnControls(durationColumn!, strings.startTimeColumn)}
+          <th class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
+            {@render columnControls(durationColumn!, strings.startTimeColumn, true)}
           </th>
         {:else if slot.id === TRAILING_SLOT.id}
           <th class="no-print">
@@ -241,10 +241,15 @@
             </button>
           </th>
         {:else if asColumn(slot).type === 'duration'}
-          <th class="group-end">{asColumn(slot).title}</th>
+          {@const column = asColumn(slot)}
+          <th class="group-end" class:print-hidden={column.hideInPrint}
+            >{column.title}{@render printMark(column.hideInPrint === true)}</th
+          >
         {:else}
           {@const column = asColumn(slot)}
-          <th>{@render columnControls(column, column.title)}</th>
+          <th class:print-hidden={column.hideInPrint}
+            >{@render columnControls(column, column.title, false)}</th
+          >
         {/if}
       {/each}
     </tr>
@@ -277,7 +282,7 @@
               >
             </td>
           {:else if slot.id === TIME_SLOT.id}
-            <td class="time-column group-start">
+            <td class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
               {startTimes[rowIndex] === null || startTimes[rowIndex] === undefined
                 ? ''
                 : formatTimeOfDay(startTimes[rowIndex])}
@@ -290,7 +295,11 @@
             </td>
           {:else}
             {@const column = asColumn(slot)}
-            <td data-column-type={column.type} class:group-end={column.type === 'duration'}>
+            <td
+              data-column-type={column.type}
+              class:group-end={column.type === 'duration'}
+              class:print-hidden={column.hideInPrint}
+            >
               {#if column.type === 'longText'}
                 <textarea rows="2" bind:value={row.cells[column.id]}></textarea>
               {:else if column.type === 'select'}
@@ -324,7 +333,15 @@
 
 <button type="button" class="no-print" onclick={addRow}>{strings.addRow}</button>
 
-{#snippet columnControls(column: Column, label: string)}
+{#snippet printMark(hidden: boolean)}
+  {#if hidden}<span class="print-mark no-print" role="img" aria-label={strings.notPrinted}
+      title={strings.notPrinted}>⊘</span
+    >{/if}
+{/snippet}
+
+<!-- timeGroup: the cell speaks for the start time and the duration column at
+     once, so it carries a print toggle for each of them. -->
+{#snippet columnControls(column: Column, label: string, timeGroup: boolean)}
   <!-- Not a <button>: the drag library refuses to start on any target carrying
        a .value property, so a real button never drags. -->
   <span
@@ -346,7 +363,7 @@
       >{label}{#if label.trim() === ''}<span class="placeholder no-print"
           >{strings.columnTitleLabel}</span
         >{/if}</button
-    >
+    >{@render printMark(timeGroup ? plan.hideTimeInPrint === true : column.hideInPrint === true)}
 
     {#if openColumnId === column.id}
       <span class="panel no-print" class:from-right={column.id === plan.columns.at(-1)?.id}>
@@ -386,6 +403,34 @@
 
         {#if !canBecome(column, 'duration')}
           <span class="hint">{strings.durationColumnTaken}</span>
+        {/if}
+
+        {#if timeGroup}
+          <label class="check">
+            <input
+              type="checkbox"
+              checked={plan.hideTimeInPrint !== true}
+              onchange={(event) => (plan.hideTimeInPrint = !event.currentTarget.checked)}
+            />
+            {strings.printTime}
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              checked={column.hideInPrint !== true}
+              onchange={(event) => (column.hideInPrint = !event.currentTarget.checked)}
+            />
+            {strings.printDuration}
+          </label>
+        {:else}
+          <label class="check">
+            <input
+              type="checkbox"
+              checked={column.hideInPrint !== true}
+              onchange={(event) => (column.hideInPrint = !event.currentTarget.checked)}
+            />
+            {strings.printColumn}
+          </label>
         {/if}
 
         <button type="button" onclick={() => confirmRemove(column)}>
@@ -496,6 +541,23 @@
     border: 1px solid #999;
     padding: 0.15rem 0.25rem;
     background: #fff;
+  }
+
+  .panel .check {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85em;
+  }
+
+  .panel .check input {
+    width: auto;
+  }
+
+  .print-mark {
+    margin-left: 0.3rem;
+    color: #888;
+    font-weight: normal;
   }
 
   .panel .hint {

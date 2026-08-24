@@ -63,6 +63,27 @@ test('an unnamed column prints as a blank header', async ({ page }) => {
   await expect(page.locator('thead th').nth(5)).toHaveText('', { useInnerText: true })
 })
 
+test('a column switched off is gone from the print, the rest stays', async ({ page }) => {
+  await openNewDocument(page)
+  await page.fill(durationInput(1), '15')
+  await textInput(page, 1).fill('Begrüßung')
+
+  await page.getByRole('button', { name: 'Verantwortlich' }).click()
+  await page.getByLabel('Spalte drucken').uncheck()
+  // The time group's halves are switched independently: the duration goes, the
+  // start time it feeds stays on the page.
+  await page.locator('thead .column-name').first().click()
+  await page.getByLabel('Dauer drucken').uncheck()
+
+  await page.emulateMedia({ media: 'print' })
+
+  await expect(page.locator('thead th:has-text("Verantwortlich")')).toBeHidden()
+  await expect(page.locator('td[data-column-type="duration"]').first()).toBeHidden()
+  await expect(page.locator('thead .time-column')).toBeVisible()
+  await expect(page.locator('tbody .time-column').first()).toHaveText('09:00')
+  await expect(textInput(page, 1)).toBeVisible()
+})
+
 test('the page renders onto A4 as a PDF', async ({ page }) => {
   await openNewDocument(page)
   await page.fill(durationInput(1), '15')

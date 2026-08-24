@@ -6,6 +6,8 @@ export interface Column {
   type: ColumnType
   /** Only set on 'select' columns: which user-managed list the cell picks from. */
   listId?: string
+  /** Absent means the column prints, so documents stored before this existed keep printing. */
+  hideInPrint?: boolean
 }
 
 export interface Row {
@@ -34,6 +36,8 @@ export interface ScheduleDocument {
   startTime: string
   columns: Column[]
   rows: Row[]
+  /** The start-time cell is not a column, so its print flag lives here. */
+  hideTimeInPrint?: boolean
   updatedAt: number
 }
 
