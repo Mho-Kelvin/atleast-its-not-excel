@@ -234,7 +234,10 @@
   /* The sheet is the paper: ruled 5mm like a school exercise book, which is
      also the rhythm the table rows are sized to. */
   .sheet {
-    padding: var(--space-5);
+    /* The ruling starts where the writing starts, so a row of two squares lands
+       on a line instead of somewhere between two. */
+    background-origin: content-box;
+    padding: calc(var(--square) * 2);
     border: 1px solid var(--rule);
     border-radius: var(--radius-lg);
     background-color: #fff;
@@ -245,11 +248,12 @@
   }
 
   header {
-    margin-bottom: var(--space-5);
+    margin-bottom: calc(var(--square) * 2);
   }
 
   .title {
     width: 100%;
+    height: calc(var(--square) * 2);
     padding: 0;
     border: none;
     background: none;
@@ -278,7 +282,8 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    margin: var(--space-2) 0 var(--space-4);
+    height: calc(var(--square) * 2);
+    margin: 0 0 var(--square);
     color: var(--ink-muted);
     font-size: 0.9rem;
   }
@@ -305,7 +310,8 @@
       display: block;
     }
 
-    /* Paper is paper: no ruling, no card, no margin of its own. */
+    /* Paper is paper: no ruling, no card, no margin of its own, and no rhythm to
+       hold: there is nothing left to line up with. */
     .sheet {
       padding: 0;
       border: none;
@@ -316,6 +322,11 @@
 
     header {
       margin-bottom: 4mm;
+    }
+
+    .title,
+    .start {
+      height: auto;
     }
 
     .start {

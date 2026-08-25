@@ -367,6 +367,7 @@
   }
 
   .add-column {
+    margin: 0 auto;
     padding: var(--space-1) var(--space-2);
     border-color: transparent;
     background: none;

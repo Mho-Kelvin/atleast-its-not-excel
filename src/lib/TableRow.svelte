@@ -178,6 +178,7 @@
   .trailing {
     width: 1px;
     padding: 0.15rem;
+    text-align: center;
   }
 
   /* Quiet, but always drawn: a touch screen has no hover to reveal it with. */
@@ -186,6 +187,10 @@
     border-color: transparent;
     background: none;
     color: var(--ink-faint);
+  }
+
+  .trailing .icon {
+    margin: 0 auto;
   }
 
   tr:hover .icon,

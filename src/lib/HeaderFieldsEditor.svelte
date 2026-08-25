@@ -48,12 +48,14 @@
 <style>
   /* Reads as filled-in stationery: the label column keeps its width down the
      block, so the values line up whatever the labels say. */
+  /* Two squares tall, so the block of fields sits on the ruling behind it. */
   .field {
     display: grid;
     grid-template-columns: 9rem minmax(0, 26rem) auto;
     align-items: center;
     gap: var(--space-2);
-    padding: 0.1rem 0;
+    height: calc(var(--square) * 2);
+    padding: 0;
   }
 
   .label,
@@ -111,6 +113,7 @@
     .field {
       grid-template-columns: auto 1fr auto;
       gap: 0 3mm;
+      height: auto;
       padding: 0;
     }
 
