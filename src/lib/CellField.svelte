@@ -17,9 +17,8 @@
     if (autofocus) node.focus()
   }
 
-  /** Cells are multi-line boxes, so a newline needs Shift. Plain Enter steps to
-      the same cell one row down; the draft row means there is always one there
-      once this row holds text, so nothing has to be added first. */
+  /** The cell is a multi-line box, so a newline needs Shift and plain Enter is
+      free to step one row down. */
   function onkeydown(event: KeyboardEvent): void {
     if (event.key !== 'Enter' || event.shiftKey) return
     event.preventDefault()
@@ -31,9 +30,6 @@
   }
 </script>
 
-<!-- Every editable cell is the same box: it grows with its own text instead of
-     cropping it, and there is nothing to drag open. The wrapper holds a hidden
-     copy of the value, which is what gives the grid cell its height. -->
 <span class="field" data-value={value ?? ''}>
   <textarea
     rows="1"
@@ -46,8 +42,8 @@
 </span>
 
 <style>
-  /* Auto-growing cell: the hidden ::after copy of the value sets the height,
-     the textarea sits on top of it in the same grid cell. */
+  /* The cell grows with its text: the hidden ::after copy of the value sets the
+     height and the textarea sits on top of it in the same grid cell. */
   .field {
     display: grid;
     min-width: 0;
@@ -82,8 +78,6 @@
     outline: 2px solid #4a6da7;
   }
 
-  /* The row still gets a time, computed as if the cell read zero, so the only
-     sign that it is unreadable is the cell's own colour. */
   .cell-invalid {
     color: #c0202a;
   }

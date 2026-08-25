@@ -23,11 +23,7 @@ export function isHeaderFieldEmpty(field: HeaderField): boolean {
   return field.label.trim() === '' && field.value.trim() === ''
 }
 
-/**
- * The last row and the last header field are drafts: they are already there to
- * type into, and filling one makes the next appear. That is the only way to add
- * either, so there is no button for it.
- */
+/** Keeps one empty header field and one empty row at the end to type into. */
 export function ensureDrafts(document: ScheduleDocument): void {
   const lastField = document.headerFields.at(-1)
   if (!lastField || !isHeaderFieldEmpty(lastField)) {

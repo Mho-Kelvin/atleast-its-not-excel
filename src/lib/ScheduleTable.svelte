@@ -74,7 +74,6 @@
     row.cells[column.id] = chosen
   }
 
-  /** An emptied free-text cell hands the dropdown back, so there is no extra button for it. */
   function leaveCustom(row: Row, column: Column): void {
     if ((row.cells[column.id] ?? '') === '') customCells.delete(cellKey(row, column))
   }
@@ -174,8 +173,6 @@
         {:else if isDragPlaceholder(slot)}
           <th class="no-print"></th>
         {:else if slot.id === TIME_SLOT.id}
-          <!-- The start time carries the controls for the whole time group:
-               grabbing or deleting it takes the duration column with it. -->
           <th class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
             {@render settings(durationColumn!, timeTitle, true)}
           </th>
@@ -218,8 +215,6 @@
       {#if isDragPlaceholder(row)}
         <tr class="no-print"></tr>
       {:else}
-        <!-- The last empty row is the draft: typing in it makes it a real row and
-           a fresh draft appears below, so nothing on paper is ever blank. -->
         {@const draft = rowIndex === plan.rows.length - 1 && isRowEmpty(row)}
         <tr class:draft>
           {#each slots as slot (slot.id)}

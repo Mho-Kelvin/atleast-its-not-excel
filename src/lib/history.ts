@@ -9,11 +9,8 @@ export function createHistory(): History {
   return { past: [], future: [] }
 }
 
-/**
- * Snapshots are whole documents as JSON. The documents are small enough that
- * copying one per edit costs nothing worth measuring.
- * NOTE: whole-document snapshots, move to diffs only if a real document lags.
- */
+// NOTE: whole-document JSON snapshots, move to diffs only if a real
+// document ever lags.
 export function record(history: History, snapshot: string): void {
   history.past.push(snapshot)
   if (history.past.length > LIMIT) history.past.shift()

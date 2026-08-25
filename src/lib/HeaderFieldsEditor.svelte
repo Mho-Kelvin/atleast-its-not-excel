@@ -8,8 +8,6 @@
 
 <section>
   {#each plan.headerFields as field, index (field.id)}
-    <!-- The last empty field is the draft: it becomes a real field as soon as
-         someone types in it, and a fresh draft takes its place below. -->
     {@const empty = isHeaderFieldEmpty(field)}
     {@const draft = index === plan.headerFields.length - 1 && empty}
     <div class="field" class:empty>
@@ -59,7 +57,6 @@
   }
 
   @media print {
-    /* A field nobody filled in has no business on the printed page. */
     .empty {
       display: none;
     }

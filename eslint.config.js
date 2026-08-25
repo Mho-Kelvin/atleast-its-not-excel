@@ -17,6 +17,22 @@ export default typescript.config(
     },
     rules: {
       'no-console': 'error',
+      // Stops a 700-line component growing back. A .svelte file carries its
+      // markup and its styles too, so it gets the looser cap.
+      'max-lines': ['error', { max: 300 }],
+    },
+  },
+  {
+    files: ['**/*.svelte'],
+    rules: {
+      'max-lines': ['error', { max: 400 }],
+    },
+  },
+  {
+    // A long spec file is a well-covered subject, not a clumped one.
+    files: ['**/*.test.ts', '**/*.test.svelte.ts', 'e2e/**/*.spec.ts'],
+    rules: {
+      'max-lines': 'off',
     },
   },
   {

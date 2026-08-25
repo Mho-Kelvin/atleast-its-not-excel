@@ -55,8 +55,6 @@
     <button type="button" onclick={add}>{strings.newList}</button>
   </div>
 
-  <!-- The start times are one fixed list: nothing attaches to it, nothing deletes
-       it, and a time input is what keeps unusable values out of it. -->
   <article>
     <header>
       <h2>{strings.startTimeList}</h2>

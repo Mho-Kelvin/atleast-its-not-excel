@@ -19,8 +19,8 @@
     plan: ScheduleDocument
     column: Column
     label: string
-    /** The Uhrzeit cell speaks for the start time and the duration column at
-        once, so it carries a print toggle for each of them. */
+    /** Set on the Uhrzeit cell, which speaks for the start time and the duration
+        column at once and so carries a print toggle for each. */
     timeGroup: boolean
     open: boolean
     lists: SelectList[]
@@ -33,7 +33,6 @@
 
   const durationColumn = $derived(findDurationColumn(plan.columns))
 
-  /** A column may keep the duration type it already holds; only a second one is refused. */
   function canBecome(type: ColumnType): boolean {
     if (type !== 'duration') return true
     return durationColumn === undefined || durationColumn.id === column.id

@@ -24,7 +24,6 @@
 
   const startTimeIsValid = $derived(parseTimeOfDay(plan.startTime) !== null)
 
-  /** Set while the user typed a time of their own, the same escape a dropdown cell has. */
   let customStartTime = $state(false)
   const startTimeIsCustom = $derived(
     customStartTime ||
@@ -40,7 +39,6 @@
     plan.startTime = chosen
   }
 
-  /** An emptied box hands the dropdown back, as it does in a dropdown cell. */
   function leaveCustomStartTime(): void {
     if (plan.startTime === '') customStartTime = false
   }
@@ -116,8 +114,7 @@
         <option value={CUSTOM_VALUE}>{strings.customValue}</option>
       </select>
     {:else}
-      <!-- Same time input the start-time list is edited with: a time nobody can
-           parse never gets into the document in the first place. -->
+      <!-- A time input, so an unparseable time never reaches the document. -->
       <input
         id="start-time"
         type="time"
