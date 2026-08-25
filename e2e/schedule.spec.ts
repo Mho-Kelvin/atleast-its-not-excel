@@ -388,14 +388,22 @@ test('a chosen value starts where a typed one does', async ({ page }) => {
       .evaluate((node: HTMLElement) => {
         const cell = node.closest('td')!.getBoundingClientRect()
         const style = getComputedStyle(node)
-        const own = node.getBoundingClientRect().x - cell.x
-        // A select draws its value past its own box; a textarea starts at it.
-        return node instanceof HTMLSelectElement ? own + 6 : own + parseFloat(style.paddingLeft)
+        const own = node.getBoundingClientRect().x - cell.x + parseFloat(style.paddingLeft)
+        // A dropdown with its chrome on draws its value past its own box; print
+        // takes the chrome away and the value moves back to the box.
+        const chrome = node instanceof HTMLSelectElement && style.appearance === 'auto'
+        return chrome ? own + 6 : own
       })
 
   const typed = await inset('td[data-column-type="text"] textarea')
   const chosen = await inset('td[data-column-type="select"] select')
   expect(Math.abs(chosen - typed)).toBeLessThan(1)
+
+  await page.emulateMedia({ media: 'print' })
+
+  const printedTyped = await inset('td[data-column-type="text"] textarea')
+  const printedChosen = await inset('td[data-column-type="select"] select')
+  expect(Math.abs(printedChosen - printedTyped)).toBeLessThan(1)
 })
 
 test('a dropdown shows its longest value in full', async ({ page }) => {

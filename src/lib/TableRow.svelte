@@ -270,5 +270,11 @@
     td {
       min-width: 0;
     }
+
+    /* Print strips the dropdown's chrome, and its inset goes with it: without
+       the pull-back the value would sit left of the cell's padding. */
+    td select {
+      margin-left: 0;
+    }
   }
 </style>
