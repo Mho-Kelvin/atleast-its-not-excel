@@ -8,7 +8,10 @@ const STORAGE_KEY = 'tobias-tool/v1'
 function seed(startTimes: { time: string; name?: string }[], startTime: string): void {
   const document = createDocument('Ablauf')
   document.startTime = startTime
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [document], lists: [], startTimes }))
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ documents: [document], lists: [], startTimes }),
+  )
 }
 
 async function openDocument(): Promise<void> {

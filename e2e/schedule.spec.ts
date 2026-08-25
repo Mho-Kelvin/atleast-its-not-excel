@@ -6,7 +6,9 @@ function durationInput(rowNumber: number): string {
 
 /** The first text column of a row; the default document has more than one. */
 function textInput(page: Page, rowNumber: number) {
-  return page.locator(`tbody tr:nth-child(${rowNumber}) td[data-column-type="text"] textarea`).first()
+  return page
+    .locator(`tbody tr:nth-child(${rowNumber}) td[data-column-type="text"] textarea`)
+    .first()
 }
 
 async function openNewDocument(page: Page): Promise<void> {
@@ -223,10 +225,7 @@ test('deleting the start time takes the duration column with it', async ({ page 
   await page.locator('thead .column-name').first().click()
   await page.getByRole('button', { name: 'Spalte löschen' }).click()
 
-  await expect(page.locator('thead .column-name')).toHaveText([
-    'Programmpunkt',
-    'Verantwortlich',
-  ])
+  await expect(page.locator('thead .column-name')).toHaveText(['Programmpunkt', 'Verantwortlich'])
   await expect(page.locator('.time-column')).toHaveCount(0)
   await expect(page.locator('td[data-column-type="duration"]')).toHaveCount(0)
 })

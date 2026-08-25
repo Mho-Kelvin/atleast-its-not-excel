@@ -55,10 +55,10 @@
     if (customStartTime) node.focus()
   }
 
-  /** The change key deliberately leaves out updatedAt, which we set ourselves. */
+  /** updatedAt is pinned out of the key: we set it ourselves, and a key that saw it
+      would make the effect below retrigger itself forever. */
   function changeKey(document: ScheduleDocument): string {
-    const { updatedAt: _ignored, ...rest } = document
-    return JSON.stringify(rest)
+    return JSON.stringify({ ...document, updatedAt: 0 })
   }
 
   // Declared before the recording effect on purpose: the draft row it appends
@@ -72,9 +72,11 @@
 
   // localStorage on every keystroke. ponytail: no debounce, add one if a big
   // document ever makes typing feel heavy.
-  $effect(() => {
+  function persist(): void {
     saveFailed = !saveStore($state.snapshot(store))
-  })
+  }
+
+  $effect(persist)
 
   // A drag rewrites the order on every pointer move. Recording is held off
   // until the drop, so one drag costs one undo step instead of a dozen.

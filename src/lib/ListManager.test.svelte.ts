@@ -18,7 +18,9 @@ function renderManager(initial: Store = emptyStore()) {
 }
 
 async function addStartTime(time: string, name: string): Promise<void> {
-  await fireEvent.input(screen.getByLabelText('Bezeichnung (optional)'), { target: { value: name } })
+  await fireEvent.input(screen.getByLabelText('Bezeichnung (optional)'), {
+    target: { value: name },
+  })
   await fireEvent.input(screen.getByLabelText('Wert hinzufügen: Startzeiten'), {
     target: { value: time },
   })

@@ -303,63 +303,63 @@
       {#if isDragPlaceholder(row)}
         <tr class="no-print"></tr>
       {:else}
-      <!-- The last empty row is the draft: typing in it makes it a real row and
+        <!-- The last empty row is the draft: typing in it makes it a real row and
            a fresh draft appears below, so nothing on paper is ever blank. -->
-      {@const draft = rowIndex === plan.rows.length - 1 && isRowEmpty(row)}
-      <tr class:draft>
-        {#each slots as slot (slot.id)}
-          {#if isDragPlaceholder(slot)}
-            <td class="no-print"></td>
-          {:else if slot.id === HANDLE_SLOT.id}
-            <td class="no-print handle-column">
-              <span
-                use:dragHandle
-                class="drag-handle"
-                title={strings.dragRow}
-                aria-label={strings.dragRow}>⠿</span
-              >
-            </td>
-          {:else if slot.id === TIME_SLOT.id}
-            <td class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
-              {startTimes[rowIndex] === undefined ? '' : formatTimeOfDay(startTimes[rowIndex])}
-            </td>
-          {:else if slot.id === TRAILING_SLOT.id}
-            <td class="no-print">
-              {#if !draft}
-                <button type="button" onclick={() => plan.rows.splice(rowIndex, 1)}>
-                  {strings.removeRow}
-                </button>
-              {/if}
-            </td>
-          {:else}
-            {@const column = asColumn(slot)}
-            <td
-              data-column-type={column.type}
-              class:group-end={column.type === 'duration'}
-              class:print-hidden={column.hideInPrint}
-            >
-              {#if column.type === 'select'}
-                {#if isCustomCell(row, column, row.cells[column.id] ?? '')}
-                  {@render cellField(row, column, true)}
-                {:else}
-                  <select
-                    value={row.cells[column.id] ?? ''}
-                    onchange={(event) => chooseValue(row, column, event.currentTarget.value)}
-                  >
-                    <option value=""></option>
-                    {#each listValues(lists, column.listId) as value (value)}
-                      <option {value}>{value}</option>
-                    {/each}
-                    <option value={CUSTOM_VALUE}>{strings.customValue}</option>
-                  </select>
+        {@const draft = rowIndex === plan.rows.length - 1 && isRowEmpty(row)}
+        <tr class:draft>
+          {#each slots as slot (slot.id)}
+            {#if isDragPlaceholder(slot)}
+              <td class="no-print"></td>
+            {:else if slot.id === HANDLE_SLOT.id}
+              <td class="no-print handle-column">
+                <span
+                  use:dragHandle
+                  class="drag-handle"
+                  title={strings.dragRow}
+                  aria-label={strings.dragRow}>⠿</span
+                >
+              </td>
+            {:else if slot.id === TIME_SLOT.id}
+              <td class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
+                {startTimes[rowIndex] === undefined ? '' : formatTimeOfDay(startTimes[rowIndex])}
+              </td>
+            {:else if slot.id === TRAILING_SLOT.id}
+              <td class="no-print">
+                {#if !draft}
+                  <button type="button" onclick={() => plan.rows.splice(rowIndex, 1)}>
+                    {strings.removeRow}
+                  </button>
                 {/if}
-              {:else}
-                {@render cellField(row, column, false)}
-              {/if}
-            </td>
-          {/if}
-        {/each}
-      </tr>
+              </td>
+            {:else}
+              {@const column = asColumn(slot)}
+              <td
+                data-column-type={column.type}
+                class:group-end={column.type === 'duration'}
+                class:print-hidden={column.hideInPrint}
+              >
+                {#if column.type === 'select'}
+                  {#if isCustomCell(row, column, row.cells[column.id] ?? '')}
+                    {@render cellField(row, column, true)}
+                  {:else}
+                    <select
+                      value={row.cells[column.id] ?? ''}
+                      onchange={(event) => chooseValue(row, column, event.currentTarget.value)}
+                    >
+                      <option value=""></option>
+                      {#each listValues(lists, column.listId) as value (value)}
+                        <option {value}>{value}</option>
+                      {/each}
+                      <option value={CUSTOM_VALUE}>{strings.customValue}</option>
+                    </select>
+                  {/if}
+                {:else}
+                  {@render cellField(row, column, false)}
+                {/if}
+              </td>
+            {/if}
+          {/each}
+        </tr>
       {/if}
     {/each}
   </tbody>
@@ -379,13 +379,15 @@
       use:focusIfNew={isNewCustomValue}
       bind:value={row.cells[column.id]}
       onblur={() => column.type === 'select' && leaveCustom(row, column)}
-      onkeydown={onCellKeydown}
-    ></textarea>
+      onkeydown={onCellKeydown}></textarea>
   </span>
 {/snippet}
 
 {#snippet printMark(hidden: boolean)}
-  {#if hidden}<span class="print-mark no-print" role="img" aria-label={strings.notPrinted}
+  {#if hidden}<span
+      class="print-mark no-print"
+      role="img"
+      aria-label={strings.notPrinted}
       title={strings.notPrinted}>⊘</span
     >{/if}
 {/snippet}
@@ -645,7 +647,6 @@
     line-height: 1;
     padding: 0.1rem 0.4rem;
   }
-
 
   input,
   textarea,

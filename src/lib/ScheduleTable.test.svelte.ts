@@ -16,9 +16,7 @@ function renderTable(lists: SelectList[] = []) {
 }
 
 function headerNames(): string[] {
-  return screen
-    .getAllByTitle('Spalte bearbeiten')
-    .map((button) => button.textContent?.trim() ?? '')
+  return screen.getAllByTitle('Spalte bearbeiten').map((button) => button.textContent?.trim() ?? '')
 }
 
 async function openSettings(name: string): Promise<void> {
@@ -41,7 +39,9 @@ async function dropdownColumn(values: string[]) {
 }
 
 function selectCells(): HTMLSelectElement[] {
-  return [...document.querySelectorAll('td[data-column-type="select"] select')] as HTMLSelectElement[]
+  return [
+    ...document.querySelectorAll('td[data-column-type="select"] select'),
+  ] as HTMLSelectElement[]
 }
 
 function selectCell(): HTMLSelectElement {
