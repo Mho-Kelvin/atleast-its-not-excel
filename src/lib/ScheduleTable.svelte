@@ -1,7 +1,19 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity'
   import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action'
-  import { addColumn, createColumn, findDurationColumn, isRowEmpty, removeColumn } from './document'
+  import CellField from './CellField.svelte'
+  import ColumnSettingsPanel from './ColumnSettingsPanel.svelte'
+  import PrintMark from './PrintMark.svelte'
+  import { addColumn, createColumn, findDurationColumn, isRowEmpty } from './document'
+  import {
+    columnAnnouncement,
+    freezeColumnWidths,
+    releaseColumnWidths,
+    rowAnnouncement,
+  } from './dragging'
+  import { parseDuration } from './duration'
+  import { CUSTOM_VALUE, listValues } from './lists'
+  import { computeStartTimes, formatTimeOfDay, parseTimeOfDay } from './schedule'
   import {
     columnsFromDndItems,
     headerSlots,
@@ -12,11 +24,8 @@
     TRAILING_SLOT,
     type HeaderSlot,
   } from './slots'
-  import { parseDuration } from './duration'
-  import { CUSTOM_VALUE, listValues } from './lists'
-  import { computeStartTimes, formatTimeOfDay, parseTimeOfDay } from './schedule'
   import { dragAnnouncements, strings } from './strings'
-  import type { Column, ColumnType, Row, ScheduleDocument, SelectList } from './types'
+  import type { Column, Row, ScheduleDocument, SelectList } from './types'
 
   let {
     plan = $bindable(),
@@ -27,8 +36,6 @@
     lists: SelectList[]
     ondragstatechange?: (dragging: boolean) => void
   } = $props()
-
-  const TYPES: ColumnType[] = ['text', 'longText', 'select', 'duration']
 
   const durationColumn = $derived(findDurationColumn(plan.columns))
   const timeTitle = $derived(plan.timeTitle ?? strings.startTimeColumn)
@@ -72,23 +79,6 @@
     if ((row.cells[column.id] ?? '') === '') customCells.delete(cellKey(row, column))
   }
 
-  function focusIfNew(node: HTMLTextAreaElement, active: boolean): void {
-    if (active) node.focus()
-  }
-
-  /** Cells are multi-line boxes, so a newline needs Shift. Plain Enter steps to
-      the same cell one row down; the draft row means there is always one there
-      once this row holds text, so nothing has to be added first. */
-  function onCellKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Enter' || event.shiftKey) return
-    event.preventDefault()
-
-    const cell = (event.currentTarget as HTMLElement).closest('td')
-    const below = cell?.closest('tr')?.nextElementSibling
-    const field = below?.children[cell!.cellIndex]?.querySelector('textarea, select')
-    if (field instanceof HTMLElement) field.focus()
-  }
-
   // headerSlots always parks the start-time cell next to the duration column,
   // which would snap it back on every frame of a drag that grabbed it. While a
   // drag is in flight the library's own item order is what gets rendered.
@@ -106,112 +96,45 @@
     ondragstatechange?.(active)
   }
 
+  function announce(text: string | null): void {
+    if (text !== null) announcement = text
+  }
+
   function onRowsReordered(event: CustomEvent<DndEvent<Row>>): void {
     setDragging(true)
     plan.rows = event.detail.items
-    announceRow(event, dragAnnouncements.rowMoved)
+    announce(rowAnnouncement(event, dragAnnouncements.rowMoved))
   }
 
   function onRowsDropped(event: CustomEvent<DndEvent<Row>>): void {
     plan.rows = rowsFromDndItems(event.detail.items)
-    announceRow(event, dragAnnouncements.rowDropped)
+    announce(rowAnnouncement(event, dragAnnouncements.rowDropped))
     setDragging(false)
-  }
-
-  function announceRow(
-    event: CustomEvent<DndEvent<Row>>,
-    phrase: (position: number, count: number) => string,
-  ): void {
-    const index = event.detail.items.findIndex((row) => row.id === event.detail.info.id)
-    if (index < 0) return
-    announcement = phrase(index + 1, event.detail.items.length)
   }
 
   function onColumnsReordered(event: CustomEvent<DndEvent<HeaderSlot>>): void {
     setDragging(true)
     slotsInFlight = event.detail.items
     plan.columns = columnsFromDndItems(event.detail.items, event.detail.info.id)
-    announceColumn(event, dragAnnouncements.columnMoved)
+    announce(columnAnnouncement(event, dragAnnouncements.columnMoved, timeTitle))
   }
 
   function onColumnsDropped(event: CustomEvent<DndEvent<HeaderSlot>>): void {
     plan.columns = columnsFromDndItems(event.detail.items, event.detail.info.id)
-    announceColumn(event, dragAnnouncements.columnDropped)
+    announce(columnAnnouncement(event, dragAnnouncements.columnDropped, timeTitle))
     slotsInFlight = null
-    releaseColumnWidths()
+    releaseColumnWidths(headerRow)
     setDragging(false)
-  }
-
-  function announceColumn(
-    event: CustomEvent<DndEvent<HeaderSlot>>,
-    phrase: (name: string, position: number, count: number) => string,
-  ): void {
-    const dragged = event.detail.info.id
-    const columns = columnsFromDndItems(event.detail.items, dragged)
-    const index =
-      dragged === TIME_SLOT.id
-        ? columns.findIndex((column) => column.type === 'duration')
-        : columns.findIndex((column) => column.id === dragged)
-    if (index < 0) return
-
-    const name = dragged === TIME_SLOT.id ? timeTitle : columnName(columns[index])
-    announcement = phrase(name, index + 1, columns.length)
-  }
-
-  /**
-   * Lifting a header cell out of table flow makes auto layout re-solve every
-   * column width each frame, so the header stops lining up with the body. The
-   * widths are pinned for the duration of the drag and released afterwards,
-   * which leaves the printed table's automatic widths untouched.
-   */
-  function freezeColumnWidths(): void {
-    for (const cell of headerRow.children) {
-      const element = cell as HTMLElement
-      element.style.width = `${element.getBoundingClientRect().width}px`
-    }
-    // A press that never turns into a drag gets no finalize event, so the
-    // widths would otherwise stay pinned.
-    window.addEventListener('pointerup', releaseUnlessDragging, { once: true })
-  }
-
-  function releaseUnlessDragging(): void {
-    if (!dragging) releaseColumnWidths()
-  }
-
-  function releaseColumnWidths(): void {
-    for (const cell of headerRow.children) (cell as HTMLElement).style.width = ''
   }
 
   function asColumn(slot: HeaderSlot): Column {
     return slot as Column
   }
 
-  function columnName(column: Column): string {
-    return column.title.trim() === '' ? strings.columnTitleLabel : column.title
-  }
-
-  /** A column may keep the duration type it already holds; only a second one is refused. */
-  function canBecome(column: Column, type: ColumnType): boolean {
-    if (type !== 'duration') return true
-    return durationColumn === undefined || durationColumn.id === column.id
-  }
-
-  function changeType(column: Column, type: ColumnType): void {
-    if (!canBecome(column, type)) return
-    column.type = type
-    if (type !== 'select') column.listId = undefined
-  }
-
   function addColumnAtEnd(): void {
     const column = createColumn('', 'text')
     addColumn(plan, column)
     openColumnId = column.id
-  }
-
-  function confirmRemove(column: Column): void {
-    if (!window.confirm(strings.confirmDeleteColumn)) return
-    if (openColumnId === column.id) openColumnId = null
-    removeColumn(plan, column.id)
   }
 
   /** Clicking anywhere outside the open panel closes it, as a popover would. */
@@ -224,10 +147,6 @@
 
   function onWindowKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') openColumnId = null
-  }
-
-  function focusOnOpen(node: HTMLInputElement): void {
-    node.focus()
   }
 </script>
 
@@ -258,7 +177,7 @@
           <!-- The start time carries the controls for the whole time group:
                grabbing or deleting it takes the duration column with it. -->
           <th class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
-            {@render columnControls(durationColumn!, timeTitle, true)}
+            {@render settings(durationColumn!, timeTitle, true)}
           </th>
         {:else if slot.id === TRAILING_SLOT.id}
           <th class="no-print">
@@ -274,12 +193,12 @@
         {:else if asColumn(slot).type === 'duration'}
           {@const column = asColumn(slot)}
           <th class="group-end" class:print-hidden={column.hideInPrint}
-            >{column.title}{@render printMark(column.hideInPrint === true)}</th
+            >{column.title}<PrintMark hidden={column.hideInPrint} /></th
           >
         {:else}
           {@const column = asColumn(slot)}
           <th class:print-hidden={column.hideInPrint}
-            >{@render columnControls(column, column.title, false)}</th
+            >{@render settings(column, column.title, false)}</th
           >
         {/if}
       {/each}
@@ -334,23 +253,25 @@
                 class:group-end={column.type === 'duration'}
                 class:print-hidden={column.hideInPrint}
               >
-                {#if column.type === 'select'}
-                  {#if isCustomCell(row, column, row.cells[column.id] ?? '')}
-                    {@render cellField(row, column, true)}
-                  {:else}
-                    <select
-                      value={row.cells[column.id] ?? ''}
-                      onchange={(event) => chooseValue(row, column, event.currentTarget.value)}
-                    >
-                      <option value=""></option>
-                      {#each listValues(lists, column.listId) as value (value)}
-                        <option {value}>{value}</option>
-                      {/each}
-                      <option value={CUSTOM_VALUE}>{strings.customValue}</option>
-                    </select>
-                  {/if}
+                {#if column.type === 'select' && !isCustomCell(row, column, row.cells[column.id] ?? '')}
+                  <select
+                    value={row.cells[column.id] ?? ''}
+                    onchange={(event) => chooseValue(row, column, event.currentTarget.value)}
+                  >
+                    <option value=""></option>
+                    {#each listValues(lists, column.listId) as value (value)}
+                      <option {value}>{value}</option>
+                    {/each}
+                    <option value={CUSTOM_VALUE}>{strings.customValue}</option>
+                  </select>
                 {:else}
-                  {@render cellField(row, column, false)}
+                  <CellField
+                    bind:value={row.cells[column.id]}
+                    invalid={column.type === 'duration' &&
+                      isUnreadableDuration(row.cells[column.id] ?? '')}
+                    autofocus={column.type === 'select'}
+                    onblur={column.type === 'select' ? () => leaveCustom(row, column) : undefined}
+                  />
                 {/if}
               </td>
             {/if}
@@ -361,152 +282,18 @@
   </tbody>
 </table>
 
-<!-- Every editable cell is the same box: it grows with its own text instead of
-     cropping it, and there is nothing to drag open. The wrapper holds a hidden
-     copy of the value, which is what gives the grid cell its height. -->
-{#snippet cellField(row: Row, column: Column, isNewCustomValue: boolean)}
-  {@const value = row.cells[column.id] ?? ''}
-  {@const invalid = column.type === 'duration' && isUnreadableDuration(value)}
-  <span class="field" data-value={value}>
-    <textarea
-      rows="1"
-      class:cell-invalid={invalid}
-      title={invalid ? strings.durationInvalid : ''}
-      use:focusIfNew={isNewCustomValue}
-      bind:value={row.cells[column.id]}
-      onblur={() => column.type === 'select' && leaveCustom(row, column)}
-      onkeydown={onCellKeydown}></textarea>
-  </span>
-{/snippet}
-
-{#snippet printMark(hidden: boolean)}
-  {#if hidden}<span
-      class="print-mark no-print"
-      role="img"
-      aria-label={strings.notPrinted}
-      title={strings.notPrinted}>⊘</span
-    >{/if}
-{/snippet}
-
-<!-- timeGroup: the cell speaks for the start time and the duration column at
-     once, so it carries a print toggle for each of them. -->
-{#snippet columnControls(column: Column, label: string, timeGroup: boolean)}
-  <!-- Not a <button>: the drag library refuses to start on any target carrying
-       a .value property, so a real button never drags. -->
-  <span
-    use:dragHandle
-    role="button"
-    tabindex="0"
-    class="drag-handle no-print"
-    title={strings.dragColumn}
-    aria-label={strings.dragColumn}
-    onpointerdown={freezeColumnWidths}
-    onkeydown={freezeColumnWidths}>⠿</span
-  ><span class="column-settings">
-    <button
-      type="button"
-      class="column-name"
-      aria-expanded={openColumnId === column.id}
-      title={strings.columnSettings}
-      onclick={() => (openColumnId = openColumnId === column.id ? null : column.id)}
-      >{label}{#if label.trim() === ''}<span class="placeholder no-print"
-          >{strings.columnTitleLabel}</span
-        >{/if}</button
-    >{@render printMark(timeGroup ? plan.hideTimeInPrint === true : column.hideInPrint === true)}
-
-    {#if openColumnId === column.id}
-      <span class="panel no-print" class:from-right={column.id === plan.columns.at(-1)?.id}>
-        <!-- Explicit for/id, not a wrapping <label>: a wrapped select pulls its
-             own option text into its accessible name. -->
-        {#if timeGroup}
-          <label for="time-title-{column.id}">{strings.timeColumnTitleLabel}</label>
-          <input
-            id="time-title-{column.id}"
-            type="text"
-            use:focusOnOpen
-            placeholder={strings.startTimeColumn}
-            value={plan.timeTitle ?? ''}
-            oninput={(event) => (plan.timeTitle = event.currentTarget.value)}
-          />
-          <label class="check">
-            <input
-              type="checkbox"
-              checked={plan.hideTimeInPrint !== true}
-              onchange={(event) => (plan.hideTimeInPrint = !event.currentTarget.checked)}
-            />
-            {strings.printTime}
-          </label>
-
-          <label for="column-title-{column.id}">{strings.durationColumnTitleLabel}</label>
-          <input
-            id="column-title-{column.id}"
-            type="text"
-            placeholder={strings.columnTypes.duration}
-            bind:value={column.title}
-          />
-          <label class="check">
-            <input
-              type="checkbox"
-              checked={column.hideInPrint !== true}
-              onchange={(event) => (column.hideInPrint = !event.currentTarget.checked)}
-            />
-            {strings.printDuration}
-          </label>
-        {:else}
-          <label for="column-title-{column.id}">{strings.columnTitleLabel}</label>
-          <input
-            id="column-title-{column.id}"
-            type="text"
-            use:focusOnOpen
-            placeholder={strings.columnTitleLabel}
-            bind:value={column.title}
-          />
-        {/if}
-
-        <label for="column-type-{column.id}">{strings.columnTypeLabel}</label>
-        <select
-          id="column-type-{column.id}"
-          value={column.type}
-          onchange={(event) => changeType(column, event.currentTarget.value as ColumnType)}
-        >
-          {#each TYPES as type (type)}
-            <option value={type} disabled={!canBecome(column, type)}>
-              {strings.columnTypes[type]}
-            </option>
-          {/each}
-        </select>
-
-        {#if column.type === 'select'}
-          <label for="column-list-{column.id}">{strings.columnListLabel}</label>
-          <select id="column-list-{column.id}" bind:value={column.listId}>
-            <option value={undefined}>{strings.noListChosen}</option>
-            {#each lists as list (list.id)}
-              <option value={list.id}>{list.name}</option>
-            {/each}
-          </select>
-        {/if}
-
-        {#if !canBecome(column, 'duration')}
-          <span class="hint">{strings.durationColumnTaken}</span>
-        {/if}
-
-        {#if !timeGroup}
-          <label class="check">
-            <input
-              type="checkbox"
-              checked={column.hideInPrint !== true}
-              onchange={(event) => (column.hideInPrint = !event.currentTarget.checked)}
-            />
-            {strings.printColumn}
-          </label>
-        {/if}
-
-        <button type="button" onclick={() => confirmRemove(column)}>
-          {strings.removeColumn}
-        </button>
-      </span>
-    {/if}
-  </span>
+{#snippet settings(column: Column, label: string, timeGroup: boolean)}
+  <ColumnSettingsPanel
+    bind:plan
+    {column}
+    {label}
+    {timeGroup}
+    {lists}
+    open={openColumnId === column.id}
+    ontoggle={() => (openColumnId = openColumnId === column.id ? null : column.id)}
+    onclosed={() => (openColumnId = null)}
+    ongrab={() => freezeColumnWidths(headerRow, () => dragging)}
+  />
 {/snippet}
 
 <style>
@@ -565,94 +352,10 @@
     clip-path: inset(50%);
   }
 
-  .column-name {
-    border: none;
-    background: none;
-    padding: 0;
-    font: inherit;
-    font-weight: inherit;
-    color: inherit;
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .placeholder {
-    color: #999;
-    font-weight: normal;
-  }
-
-  .panel {
-    position: absolute;
-    z-index: 1;
-    top: 100%;
-    left: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    min-width: 14rem;
-    padding: 0.6rem;
-    border: 1px solid #999;
-    background: #fff;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
-    font-weight: normal;
-    text-align: left;
-    white-space: normal;
-  }
-
-  /* The rightmost column sits at the table's edge, so its panel opens inwards. */
-  .panel.from-right {
-    left: auto;
-    right: 0;
-  }
-
-  .panel label {
-    font-size: 0.85em;
-  }
-
-  .panel input,
-  .panel select {
-    border: 1px solid #999;
-    padding: 0.15rem 0.25rem;
-    background: #fff;
-  }
-
-  .panel .check {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.85em;
-  }
-
-  .panel .check input {
-    width: auto;
-  }
-
-  .print-mark {
-    margin-left: 0.3rem;
-    color: #888;
-    font-weight: normal;
-  }
-
-  .panel .hint {
-    color: #666;
-    font-size: 0.8em;
-  }
-
   .add-column {
     font-size: 1.1em;
     line-height: 1;
     padding: 0.1rem 0.4rem;
-  }
-
-  input,
-  textarea,
-  select {
-    width: 100%;
-    border: none;
-    padding: 0;
-    background: transparent;
-    font: inherit;
-    color: inherit;
   }
 
   /* A percentage-wide select contributes no width to the auto table layout, so
@@ -660,55 +363,21 @@
      column instead, which is the whole point of the dropdown. */
   td select {
     width: auto;
-  }
-
-  /* Auto-growing cell: the hidden ::after copy of the value sets the height,
-     the textarea sits on top of it in the same grid cell. */
-  .field {
-    display: grid;
-    min-width: 0;
-  }
-
-  .field::after {
-    content: attr(data-value) ' ';
-    visibility: hidden;
-  }
-
-  .field > textarea,
-  .field::after {
-    grid-area: 1 / 1;
-    min-width: 0;
+    border: none;
+    padding: 0;
+    background: transparent;
     font: inherit;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    color: inherit;
   }
 
-  .field > textarea {
-    resize: none;
-    overflow: hidden;
-  }
-
-  input:focus,
-  textarea:focus,
-  select:focus {
+  td select:focus {
     outline: 2px solid #4a6da7;
-  }
-
-  /* The row still gets a time, computed as if the cell read zero, so the only
-     sign that it is unreadable is the cell's own colour. */
-  .cell-invalid {
-    color: #c0202a;
   }
 
   @media print {
     /* The draft row is an offer to type, not a line of the schedule. */
     .draft {
       display: none;
-    }
-
-    /* Scoped, so it beats the same reset in print.css. */
-    .cell-invalid {
-      color: inherit;
     }
   }
 </style>
