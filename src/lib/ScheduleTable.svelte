@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { SvelteSet } from 'svelte/reactivity'
   import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action'
   import {
     addColumn,
@@ -33,6 +34,9 @@
 
   const TYPES: ColumnType[] = ['text', 'longText', 'select', 'duration']
 
+  /** Never a list value: the dropdown entry that turns the cell into a text box. */
+  const CUSTOM_VALUE = '__custom__'
+
   const durationColumn = $derived(findDurationColumn(plan.columns))
   const timeTitle = $derived(plan.timeTitle ?? strings.startTimeColumn)
   const documentStart = $derived(parseTimeOfDay(plan.startTime))
@@ -46,6 +50,37 @@
 
   function isUnreadableDuration(text: string): boolean {
     return text.trim() !== '' && parseDuration(text) === null
+  }
+
+  /** Cells the user switched to free text. A value off the list counts too, so a
+      document written before the list changed still shows what it holds. */
+  const customCells = new SvelteSet<string>()
+
+  function cellKey(row: Row, column: Column): string {
+    return `${row.id}:${column.id}`
+  }
+
+  function isCustomCell(row: Row, column: Column, value: string): boolean {
+    if (customCells.has(cellKey(row, column))) return true
+    return value !== '' && !listValues(lists, column.listId).includes(value)
+  }
+
+  function chooseValue(row: Row, column: Column, chosen: string): void {
+    if (chosen === CUSTOM_VALUE) {
+      customCells.add(cellKey(row, column))
+      row.cells[column.id] = ''
+      return
+    }
+    row.cells[column.id] = chosen
+  }
+
+  /** An emptied free-text cell hands the dropdown back, so there is no extra button for it. */
+  function leaveCustom(row: Row, column: Column): void {
+    if ((row.cells[column.id] ?? '') === '') customCells.delete(cellKey(row, column))
+  }
+
+  function focusOnMount(node: HTMLInputElement): void {
+    node.focus()
   }
 
   function addRow(): void {
@@ -304,12 +339,26 @@
               {#if column.type === 'longText'}
                 <textarea rows="2" bind:value={row.cells[column.id]}></textarea>
               {:else if column.type === 'select'}
-                <select bind:value={row.cells[column.id]}>
-                  <option value=""></option>
-                  {#each listValues(lists, column.listId) as value (value)}
-                    <option {value}>{value}</option>
-                  {/each}
-                </select>
+                {#if isCustomCell(row, column, row.cells[column.id] ?? '')}
+                  <input
+                    type="text"
+                    use:focusOnMount
+                    bind:value={row.cells[column.id]}
+                    onblur={() => leaveCustom(row, column)}
+                    onkeydown={(event) => onCellKeydown(event, rowIndex)}
+                  />
+                {:else}
+                  <select
+                    value={row.cells[column.id] ?? ''}
+                    onchange={(event) => chooseValue(row, column, event.currentTarget.value)}
+                  >
+                    <option value=""></option>
+                    {#each listValues(lists, column.listId) as value (value)}
+                      <option {value}>{value}</option>
+                    {/each}
+                    <option value={CUSTOM_VALUE}>{strings.customValue}</option>
+                  </select>
+                {/if}
               {:else}
                 <input
                   type="text"

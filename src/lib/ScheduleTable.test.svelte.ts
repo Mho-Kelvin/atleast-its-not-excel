@@ -29,6 +29,29 @@ async function openSettings(name: string): Promise<void> {
   await fireEvent.click(button)
 }
 
+async function dropdownColumn(values: string[]) {
+  const list = createList('Räume')
+  list.values = values
+  const plan = renderTable([list])
+  const column = plan.columns.find((it) => it.title === 'Verantwortlich')!
+  column.type = 'select'
+  column.listId = list.id
+  await Promise.resolve()
+  return plan
+}
+
+function selectCells(): HTMLSelectElement[] {
+  return [...document.querySelectorAll('td[data-column-type="select"] select')] as HTMLSelectElement[]
+}
+
+function selectCell(): HTMLSelectElement {
+  return selectCells()[0]
+}
+
+function textCell(): HTMLInputElement {
+  return document.querySelector('td[data-column-type="select"] input') as HTMLInputElement
+}
+
 describe('column headers', () => {
   it('adds an unnamed column at the end and opens its settings', async () => {
     const plan = renderTable()
@@ -92,6 +115,44 @@ describe('column headers', () => {
     await fireEvent.change(screen.getByLabelText('Liste'), { target: { value: list.id } })
 
     expect(plan.columns.find((column) => column.title === 'Verantwortlich')?.listId).toBe(list.id)
+  })
+
+  it('turns a dropdown cell into a text box once the custom entry is picked', async () => {
+    const plan = await dropdownColumn(['Saal', 'Foyer'])
+    const column = plan.columns.find((it) => it.title === 'Verantwortlich')!
+    const dropdown = selectCell()
+    expect([...dropdown.options].map((option) => option.text)).toEqual([
+      '',
+      'Saal',
+      'Foyer',
+      'Eigener Wert …',
+    ])
+
+    await fireEvent.change(dropdown, { target: { value: '__custom__' } })
+    await fireEvent.input(textCell(), { target: { value: 'Küche' } })
+
+    expect(plan.rows[0].cells[column.id]).toBe('Küche')
+    expect(selectCells()).toHaveLength(plan.rows.length - 1)
+  })
+
+  it('hands the dropdown back when the custom text is emptied', async () => {
+    const plan = await dropdownColumn(['Saal'])
+
+    await fireEvent.change(selectCell(), { target: { value: '__custom__' } })
+    await fireEvent.input(textCell(), { target: { value: '' } })
+    await fireEvent.blur(textCell())
+
+    expect(selectCells()).toHaveLength(plan.rows.length)
+  })
+
+  it('shows a stored value that is no longer on the list as text', async () => {
+    const plan = await dropdownColumn(['Saal'])
+    const column = plan.columns.find((it) => it.title === 'Verantwortlich')!
+
+    plan.rows[0].cells[column.id] = 'Küche'
+    await Promise.resolve()
+
+    expect(textCell().value).toBe('Küche')
   })
 
   it('deletes a column with its cells once confirmed', async () => {

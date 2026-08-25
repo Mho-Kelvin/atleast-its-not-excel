@@ -37,6 +37,7 @@ export const strings = {
   columnTypeLabel: 'Typ',
   columnListLabel: 'Liste',
   noListChosen: 'Keine Liste',
+  customValue: 'Eigener Wert …',
   durationColumnTaken: 'Es kann nur eine Dauer-Spalte geben.',
   printColumn: 'Spalte drucken',
   printTime: 'Uhrzeit drucken',

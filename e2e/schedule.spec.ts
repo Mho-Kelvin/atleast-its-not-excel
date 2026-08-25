@@ -133,9 +133,13 @@ test('a dropdown column offers the values of its list', async ({ page }) => {
   await page.getByLabel('Typ').selectOption('select')
   await page.getByLabel('Liste').selectOption({ label: 'Räume' })
 
-  const cell = page.locator('tbody tr:nth-child(1) td[data-column-type="select"] select')
-  await cell.selectOption('Saal')
-  await expect(cell).toHaveValue('Saal')
+  const cell = page.locator('tbody tr:nth-child(1) td[data-column-type="select"]')
+  await cell.locator('select').selectOption('Saal')
+  await expect(cell.locator('select')).toHaveValue('Saal')
+
+  await cell.locator('select').selectOption('__custom__')
+  await cell.locator('input').fill('Küche')
+  await expect(cell.locator('input')).toHaveValue('Küche')
 })
 
 test('columns can be dragged into a new order', async ({ page }) => {
