@@ -26,23 +26,19 @@ export function formatStartTime(entry: StartTime): string {
 
 /**
  * Start time per row, given the document start and one duration per row.
- * A row whose duration is unknown breaks the chain: every row below it has no
- * start time at all, rather than one computed from a guessed duration.
+ * A row whose duration is unknown counts as zero minutes, so the rows below it
+ * keep a time; the unreadable cell itself is flagged in the table.
  */
 export function computeStartTimes(
   documentStart: number,
   durations: readonly (number | null)[],
-): (number | null)[] {
-  const startTimes: (number | null)[] = []
-  let running: number | null = documentStart
+): number[] {
+  const startTimes: number[] = []
+  let running = documentStart
 
   for (const duration of durations) {
     startTimes.push(running)
-    if (running === null || duration === null) {
-      running = null
-    } else {
-      running += duration
-    }
+    running += duration ?? 0
   }
 
   return startTimes

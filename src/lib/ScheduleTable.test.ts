@@ -28,11 +28,11 @@ describe('ScheduleTable', () => {
     expect(startTimeTexts(container)).toEqual(['09:00', '09:15', '09:45'])
   })
 
-  it('leaves every row below an unreadable duration without a start time', () => {
+  it('reads an unreadable duration as zero minutes for the rows below it', () => {
     const plan = planWithDurations('15', 'tbd', '10')
     const { container } = render(ScheduleTable, { props: { plan, lists: [] } })
 
-    expect(startTimeTexts(container)).toEqual(['09:00', '09:15', ''])
+    expect(startTimeTexts(container)).toEqual(['09:00', '09:15', '09:15'])
   })
 
   it('marks the unreadable cell itself', () => {

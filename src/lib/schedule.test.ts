@@ -33,8 +33,8 @@ describe('computeStartTimes', () => {
     expect(computeStartTimes(540, [null])).toEqual([540])
   })
 
-  it('breaks the chain below an unknown duration', () => {
-    expect(computeStartTimes(540, [15, null, 30, 10])).toEqual([540, 555, null, null])
+  it('counts an unknown duration as zero and keeps the chain going', () => {
+    expect(computeStartTimes(540, [15, null, 30, 10])).toEqual([540, 555, 555, 585])
   })
 
   it('returns nothing for an empty table', () => {

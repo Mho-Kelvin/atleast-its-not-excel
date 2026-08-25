@@ -321,9 +321,7 @@
             </td>
           {:else if slot.id === TIME_SLOT.id}
             <td class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
-              {startTimes[rowIndex] === null || startTimes[rowIndex] === undefined
-                ? ''
-                : formatTimeOfDay(startTimes[rowIndex])}
+              {startTimes[rowIndex] === undefined ? '' : formatTimeOfDay(startTimes[rowIndex])}
             </td>
           {:else if slot.id === TRAILING_SLOT.id}
             <td class="no-print">
@@ -699,14 +697,21 @@
     outline: 2px solid #4a6da7;
   }
 
+  /* The row still gets a time, computed as if the cell read zero, so the only
+     sign that it is unreadable is the cell's own colour. */
   .cell-invalid {
-    background: #ffe8e8;
+    color: #c0202a;
   }
 
   @media print {
     /* The draft row is an offer to type, not a line of the schedule. */
     .draft {
       display: none;
+    }
+
+    /* Scoped, so it beats the same reset in print.css. */
+    .cell-invalid {
+      color: inherit;
     }
   }
 </style>

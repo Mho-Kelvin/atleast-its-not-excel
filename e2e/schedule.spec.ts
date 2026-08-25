@@ -25,12 +25,12 @@ test('a typed duration moves the next row down the clock', async ({ page }) => {
   await expect(page.locator('tbody .time-column')).toHaveText(['09:00', '09:15', '10:45'])
 })
 
-test('an unreadable duration stops the clock instead of guessing', async ({ page }) => {
+test('an unreadable duration counts as zero and is flagged in its cell', async ({ page }) => {
   await openNewDocument(page)
 
   await page.fill(durationInput(1), 'tbd')
 
-  await expect(page.locator('tbody .time-column')).toHaveText(['09:00', ''])
+  await expect(page.locator('tbody .time-column')).toHaveText(['09:00', '09:00'])
   await expect(page.locator('textarea.cell-invalid')).toHaveCount(1)
 })
 
