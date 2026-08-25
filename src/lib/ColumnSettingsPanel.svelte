@@ -29,7 +29,7 @@
     ongrab: () => void
   } = $props()
 
-  const TYPES: ColumnType[] = ['text', 'longText', 'select', 'duration']
+  const TYPES: ColumnType[] = ['text', 'select', 'duration']
 
   const durationColumn = $derived(findDurationColumn(plan.columns))
 

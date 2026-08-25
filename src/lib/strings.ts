@@ -60,7 +60,6 @@ export const strings = {
 
   columnTypes: {
     text: 'Text',
-    longText: 'Mehrzeiliger Text',
     select: 'Auswahlliste',
     duration: 'Dauer',
   },

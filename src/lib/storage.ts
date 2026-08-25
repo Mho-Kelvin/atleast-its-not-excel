@@ -29,6 +29,11 @@ export function loadStore(): Store {
     return emptyStore()
   }
   parsed.startTimes = (parsed.startTimes ?? []).map(toStartTime)
+  for (const document of parsed.documents) {
+    for (const column of document.columns) {
+      if ((column.type as string) === 'longText') column.type = 'text'
+    }
+  }
   return parsed
 }
 

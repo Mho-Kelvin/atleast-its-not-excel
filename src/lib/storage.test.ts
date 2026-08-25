@@ -52,6 +52,14 @@ describe('loadStore', () => {
     expect(loadStore().startTimes).toEqual([{ time: '08:30' }])
   })
 
+  it('reads a column stored as the removed longText type as text', () => {
+    const document = createDocument('Ablauf')
+    ;(document.columns[1] as { type: string }).type = 'longText'
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [document], lists: [] }))
+
+    expect(loadStore().documents[0].columns[1].type).toBe('text')
+  })
+
   it('rejects a document that is missing fields', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [{ id: 'a' }], lists: [] }))
 

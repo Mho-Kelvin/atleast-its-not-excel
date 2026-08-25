@@ -1,4 +1,4 @@
-export type ColumnType = 'text' | 'longText' | 'select' | 'duration'
+export type ColumnType = 'text' | 'select' | 'duration'
 
 export interface Column {
   id: string
