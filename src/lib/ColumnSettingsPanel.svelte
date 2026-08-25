@@ -58,6 +58,28 @@
   function focusOnOpen(node: HTMLInputElement): void {
     node.focus()
   }
+
+  let nameButton: HTMLButtonElement
+
+  /* Only where the browser really has it: an environment that styles [popover]
+     away without implementing it would hide the panel for good. The fixed
+     positioning below already keeps it clear of the table's scroll container;
+     the top layer is what settles it above everything else. */
+  const TOP_LAYER = typeof HTMLElement !== 'undefined' && 'popover' in HTMLElement.prototype
+
+  /**
+   * The panel lives in the top layer, so the table's scroll container cannot
+   * clip it. That takes it out of flow too, which is why it is placed by hand
+   * instead of by `position: absolute` on the header cell.
+   */
+  function placeUnderName(node: HTMLElement): void {
+    node.showPopover?.()
+
+    const anchor = nameButton.getBoundingClientRect()
+    const room = window.innerWidth - node.offsetWidth - 8
+    node.style.top = `${anchor.bottom + 4}px`
+    node.style.left = `${Math.max(8, Math.min(anchor.left, room))}px`
+  }
 </script>
 
 <!-- Not a <button>: the drag library refuses to start on any target carrying a
@@ -69,12 +91,14 @@
   class="drag-handle no-print"
   title={strings.dragColumn}
   aria-label={strings.dragColumn}
+  aria-describedby="drag-help"
   onpointerdown={ongrab}
-  onkeydown={ongrab}>⠿</span
+  onkeydown={ongrab}><Icon name="grip" size={16} /></span
 ><span class="column-settings">
   <button
     type="button"
     class="column-name"
+    bind:this={nameButton}
     aria-expanded={open}
     title={strings.columnSettings}
     onclick={ontoggle}
@@ -84,7 +108,7 @@
   ><PrintMark hidden={timeGroup ? plan.hideTimeInPrint : column.hideInPrint} />
 
   {#if open}
-    <span class="panel no-print" class:from-right={column.id === plan.columns.at(-1)?.id}>
+    <span class="panel no-print" popover={TOP_LAYER ? 'manual' : null} use:placeUnderName>
       <!-- Explicit for/id, not a wrapping <label>: a wrapped select pulls its
            own option text into its accessible name. -->
       {#if timeGroup}
@@ -199,8 +223,10 @@
 
 <style>
   .drag-handle {
+    display: inline-flex;
+    vertical-align: middle;
     cursor: grab;
-    color: #888;
+    color: var(--ink-faint);
     user-select: none;
   }
 
@@ -215,67 +241,112 @@
     text-align: left;
   }
 
+  .column-name:hover {
+    color: var(--accent);
+  }
+
   .placeholder {
-    color: #999;
+    color: var(--ink-faint);
     font-weight: normal;
   }
 
   .panel {
-    position: absolute;
-    z-index: 1;
-    top: 100%;
-    left: 0;
+    position: fixed;
+    inset: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    min-width: 14rem;
-    padding: 0.6rem;
-    border: 1px solid #999;
-    background: #fff;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+    gap: var(--space-2);
+    min-width: 15rem;
+    margin: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    background: var(--paper);
+    box-shadow: var(--shadow-lifted);
     font-weight: normal;
     text-align: left;
     white-space: normal;
+    animation: appear 150ms ease-out;
   }
 
-  /* The rightmost column sits at the table's edge, so its panel opens inwards. */
-  .panel.from-right {
-    left: auto;
-    right: 0;
+  @keyframes appear {
+    from {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
   }
 
   .panel label {
     font-size: 0.85em;
+    color: var(--ink-muted);
   }
 
   .panel input,
   .panel select {
     width: 100%;
-    border: 1px solid #999;
-    padding: 0.15rem 0.25rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 0.2rem 0.3rem;
     background: #fff;
     font: inherit;
     color: inherit;
   }
 
-  .panel input:focus,
-  .panel select:focus {
-    outline: 2px solid #4a6da7;
+  .panel input:focus-visible,
+  .panel select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .row {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  .icon {
+    flex: none;
+    padding: var(--space-1) var(--space-2);
+    border-color: transparent;
+    background: none;
+    color: var(--ink-muted);
+  }
+
+  .icon:hover {
+    background: var(--accent-sunk);
+    border-color: transparent;
+    color: var(--accent);
   }
 
   .panel .check {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--space-2);
     font-size: 0.85em;
   }
 
   .panel .check input {
     width: auto;
+    accent-color: var(--accent);
   }
 
   .panel .hint {
-    color: #666;
+    color: var(--ink-faint);
     font-size: 0.8em;
+  }
+
+  .remove {
+    justify-content: center;
+    margin-top: var(--space-1);
+    border-color: var(--rule);
+    color: var(--red);
+  }
+
+  .remove:hover {
+    background: var(--red-sunk);
+    border-color: var(--red);
+  }
+
+  .remove:focus-visible {
+    outline-color: var(--red);
   }
 </style>

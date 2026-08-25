@@ -16,26 +16,25 @@
     oncancel: () => void
   } = $props()
 
-  let dialog: HTMLDialogElement
-
   // showModal() is what buys the focus trap, the inert background and the
   // backdrop; the open attribute alone gives a non-modal box.
-  $effect(() => {
-    if (open && !dialog.open) dialog.showModal()
-    if (!open && dialog.open) dialog.close()
-  })
+  function asModal(node: HTMLDialogElement): void {
+    node.showModal()
+  }
 </script>
 
-<dialog bind:this={dialog} class="no-print" aria-labelledby="confirm-message" {oncancel}>
-  <p id="confirm-message">{message}</p>
-  <div class="actions">
-    <button type="button" onclick={oncancel}>{strings.cancel}</button>
-    <button type="button" class="destructive" onclick={onconfirm}>
-      <Icon name="trash" size={18} />
-      {confirmLabel}
-    </button>
-  </div>
-</dialog>
+{#if open}
+  <dialog use:asModal class="no-print" aria-labelledby="confirm-message" {oncancel}>
+    <p id="confirm-message">{message}</p>
+    <div class="actions">
+      <button type="button" onclick={oncancel}>{strings.cancel}</button>
+      <button type="button" class="destructive" onclick={onconfirm}>
+        <Icon name="trash" size={18} />
+        {confirmLabel}
+      </button>
+    </div>
+  </dialog>
+{/if}
 
 <style>
   dialog {

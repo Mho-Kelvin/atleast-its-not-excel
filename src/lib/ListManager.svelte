@@ -19,12 +19,9 @@
     focusListId?: string | null
   } = $props()
 
-  let dialog: HTMLDialogElement
-
-  $effect(() => {
-    if (open && !dialog.open) dialog.showModal()
-    if (!open && dialog.open) dialog.close()
-  })
+  function asModal(node: HTMLDialogElement): void {
+    node.showModal()
+  }
 
   function scrollToFocused(node: HTMLElement, id: string | undefined): void {
     if (id !== undefined && id === focusListId) node.scrollIntoView({ block: 'center' })
@@ -68,93 +65,44 @@
   }
 </script>
 
-<dialog bind:this={dialog} class="no-print" aria-labelledby="lists-title" oncancel={onclose}>
-  <div class="bar">
-    <h1 id="lists-title">{strings.lists}</h1>
-    <button
-      type="button"
-      class="icon"
-      title={strings.close}
-      aria-label={strings.close}
-      onclick={onclose}
-    >
-      <Icon name="close" />
-    </button>
-  </div>
-
-  <div class="add">
-    <input
-      type="text"
-      aria-label={strings.listNameLabel}
-      placeholder={strings.listNameLabel}
-      bind:value={newListName}
-    />
-    <button type="button" class="primary" onclick={add}>
-      <Icon name="add" size={18} />
-      {strings.newList}
-    </button>
-  </div>
-
-  <article>
-    <header>
-      <h2>{strings.startTimeList}</h2>
-    </header>
-
-    <ul>
-      {#each store.startTimes as entry, index (entry.time)}
-        <li>
-          <span>{formatStartTime(entry)}</span>
-          {@render removeValueButton(() => store.startTimes.splice(index, 1))}
-        </li>
-      {/each}
-    </ul>
+{#if open}
+  <dialog use:asModal class="no-print" aria-labelledby="lists-title" oncancel={onclose}>
+    <div class="bar">
+      <h1 id="lists-title">{strings.lists}</h1>
+      <button
+        type="button"
+        class="icon"
+        title={strings.close}
+        aria-label={strings.close}
+        onclick={onclose}
+      >
+        <Icon name="close" />
+      </button>
+    </div>
 
     <div class="add">
       <input
         type="text"
-        aria-label={strings.startTimeNameLabel}
-        placeholder={strings.startTimeNameLabel}
-        bind:value={newStartTimeName}
+        aria-label={strings.listNameLabel}
+        placeholder={strings.listNameLabel}
+        bind:value={newListName}
       />
-      <input
-        type="time"
-        aria-label={`${strings.addValue}: ${strings.startTimeList}`}
-        bind:value={newStartTime}
-        onkeydown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            addStartTime()
-          }
-        }}
-      />
-      {@render addValueButton(addStartTime)}
+      <button type="button" class="primary" onclick={add}>
+        <Icon name="add" size={18} />
+        {strings.newList}
+      </button>
     </div>
-  </article>
 
-  {#if store.lists.length === 0}
-    <p class="empty">{strings.noLists}</p>
-  {/if}
-
-  {#each store.lists as list (list.id)}
-    <article use:scrollToFocused={list.id}>
+    <article>
       <header>
-        <input type="text" aria-label={strings.listNameLabel} bind:value={list.name} />
-        <button
-          type="button"
-          class="icon danger"
-          title={strings.deleteList}
-          aria-label={strings.deleteList}
-          onclick={() => (removing = list)}
-        >
-          <Icon name="trash" size={18} />
-        </button>
+        <h2>{strings.startTimeList}</h2>
       </header>
 
       <ul>
-        {#each list.values as value, index (value)}
+        {#each store.startTimes as entry, index (entry.time)}
           <li>
-            <span>{value}</span>
-            {@render removeValueButton(() => list.values.splice(index, 1))}
+            <span>{formatStartTime(entry)}</span>
+            {@render removeValueButton(() => store.startTimes.splice(index, 1))}
           </li>
         {/each}
       </ul>
@@ -162,20 +110,71 @@
       <div class="add">
         <input
           type="text"
-          aria-label={`${strings.addValue}: ${list.name}`}
-          bind:value={newValues[list.id]}
+          aria-label={strings.startTimeNameLabel}
+          placeholder={strings.startTimeNameLabel}
+          bind:value={newStartTimeName}
+        />
+        <input
+          type="time"
+          aria-label={`${strings.addValue}: ${strings.startTimeList}`}
+          bind:value={newStartTime}
           onkeydown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
-              addValue(list)
+              addStartTime()
             }
           }}
         />
-        {@render addValueButton(() => addValue(list))}
+        {@render addValueButton(addStartTime)}
       </div>
     </article>
-  {/each}
-</dialog>
+
+    {#if store.lists.length === 0}
+      <p class="empty">{strings.noLists}</p>
+    {/if}
+
+    {#each store.lists as list (list.id)}
+      <article use:scrollToFocused={list.id}>
+        <header>
+          <input type="text" aria-label={strings.listNameLabel} bind:value={list.name} />
+          <button
+            type="button"
+            class="icon danger"
+            title={strings.deleteList}
+            aria-label={strings.deleteList}
+            onclick={() => (removing = list)}
+          >
+            <Icon name="trash" size={18} />
+          </button>
+        </header>
+
+        <ul>
+          {#each list.values as value, index (value)}
+            <li>
+              <span>{value}</span>
+              {@render removeValueButton(() => list.values.splice(index, 1))}
+            </li>
+          {/each}
+        </ul>
+
+        <div class="add">
+          <input
+            type="text"
+            aria-label={`${strings.addValue}: ${list.name}`}
+            bind:value={newValues[list.id]}
+            onkeydown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                addValue(list)
+              }
+            }}
+          />
+          {@render addValueButton(() => addValue(list))}
+        </div>
+      </article>
+    {/each}
+  </dialog>
+{/if}
 
 {#snippet addValueButton(onclick: () => void)}
   <button

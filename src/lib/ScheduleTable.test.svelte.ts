@@ -203,6 +203,34 @@ describe('column headers', () => {
   })
 })
 
+describe('rows', () => {
+  it('deletes a row through its icon button, and offers none on the draft', async () => {
+    const plan = renderTable()
+    plan.rows[0].cells[plan.columns[1].id] = 'Einlass'
+    plan.rows.push(createRow(plan.columns))
+    await Promise.resolve()
+
+    // Two rows, one of them the empty draft at the end.
+    const buttons = screen.getAllByRole('button', { name: 'Zeile löschen' })
+    expect(buttons).toHaveLength(1)
+
+    await fireEvent.click(buttons[0])
+
+    expect(plan.rows.some((row) => row.cells[plan.columns[1].id] === 'Einlass')).toBe(false)
+  })
+
+  it('tells the keyboard how to move a row or a column', () => {
+    renderTable()
+
+    const help = document.getElementById('drag-help')
+    expect(help?.textContent).toContain('Pfeiltasten')
+
+    for (const handle of screen.getAllByLabelText(/verschieben/)) {
+      expect(handle.getAttribute('aria-describedby')).toBe('drag-help')
+    }
+  })
+})
+
 describe('the time group', () => {
   it('puts the controls on the start-time cell, not on the duration cell', () => {
     renderTable()

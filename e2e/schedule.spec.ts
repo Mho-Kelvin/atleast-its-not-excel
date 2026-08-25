@@ -158,13 +158,13 @@ test('a dropdown column offers the values of its list', async ({ page }) => {
   // Enter, not the button: the start-time card carries a button of the same name.
   await page.getByLabel('Wert hinzufügen: Räume').fill('Saal')
   await page.getByLabel('Wert hinzufügen: Räume').press('Enter')
-  await page.getByRole('button', { name: 'Zurück' }).click()
+  await page.getByRole('button', { name: 'Schließen' }).click()
 
   await page.getByRole('button', { name: 'Neues Dokument' }).click()
   await page.getByTitle('Spalte hinzufügen').click()
   await page.getByLabel('Spaltenname').fill('Ort')
   await page.getByLabel('Typ').selectOption('select')
-  await page.getByLabel('Liste').selectOption({ label: 'Räume' })
+  await page.getByLabel('Liste', { exact: true }).selectOption({ label: 'Räume' })
 
   const cell = page.locator('tbody tr:nth-child(1) td[data-column-type="select"]')
   await cell.locator('select').selectOption('Saal')
@@ -221,9 +221,9 @@ test('dragging the start time moves the duration column with it', async ({ page 
 test('deleting the start time takes the duration column with it', async ({ page }) => {
   await openNewDocument(page)
 
-  page.once('dialog', (dialog) => dialog.accept())
   await page.locator('thead .column-name').first().click()
   await page.getByRole('button', { name: 'Spalte löschen' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Spalte löschen' }).click()
 
   await expect(page.locator('thead .column-name')).toHaveText(['Programmpunkt', 'Verantwortlich'])
   await expect(page.locator('.time-column')).toHaveCount(0)
@@ -293,13 +293,13 @@ test('a dropdown shows its longest value in full', async ({ page }) => {
   await page.getByRole('button', { name: 'Neue Liste' }).click()
   await page.getByLabel('Wert hinzufügen: Räume').fill('Honigkuchenpferd im großen Saal')
   await page.getByLabel('Wert hinzufügen: Räume').press('Enter')
-  await page.getByRole('button', { name: 'Zurück' }).click()
+  await page.getByRole('button', { name: 'Schließen' }).click()
 
   await page.getByRole('button', { name: 'Neues Dokument' }).click()
   await page.getByTitle('Spalte hinzufügen').click()
   await page.getByLabel('Spaltenname').fill('Ort')
   await page.getByLabel('Typ').selectOption('select')
-  await page.getByLabel('Liste').selectOption({ label: 'Räume' })
+  await page.getByLabel('Liste', { exact: true }).selectOption({ label: 'Räume' })
 
   const dropdown = page.locator('tbody tr:nth-child(1) td[data-column-type="select"] select')
   await dropdown.selectOption('Honigkuchenpferd im großen Saal')
@@ -327,4 +327,21 @@ test('a header keeps its handle, name and mark on one line', async ({ page }) =>
   const nameBox = (await name.boundingBox())!
   expect(Math.abs(handleBox.y - nameBox.y)).toBeLessThan(handleBox.height)
   expect(nameBox.height).toBeLessThan(handleBox.height * 2)
+})
+
+test('a column can be moved with the keyboard alone', async ({ page }) => {
+  await openNewDocument(page)
+
+  const headings = page.locator('thead .column-name')
+  await expect(headings).toHaveText(['Uhrzeit', 'Programmpunkt', 'Verantwortlich'])
+
+  const handle = page.locator('thead th:nth-child(5) .drag-handle')
+  await expect(handle).toHaveAttribute('aria-describedby', 'drag-help')
+
+  await handle.focus()
+  await page.keyboard.press(' ')
+  await page.keyboard.press('ArrowUp')
+  await page.keyboard.press(' ')
+
+  await expect(headings).toHaveText(['Uhrzeit', 'Verantwortlich', 'Programmpunkt'])
 })

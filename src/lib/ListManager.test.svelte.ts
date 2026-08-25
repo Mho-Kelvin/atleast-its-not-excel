@@ -94,15 +94,17 @@ describe('ListManager', () => {
 
     const { store } = renderManager(initial)
 
+    // The lists dialog is a dialog of its own, so the confirmation is picked out
+    // by the question it asks, and looked up again on every open.
+    const confirmation = () =>
+      within(screen.getByRole('dialog', { name: /verlieren ihre Auswahl/ }))
+
     await fireEvent.click(screen.getByRole('button', { name: 'Liste löschen' }))
-    // The lists dialog is a dialog of its own, so the confirmation is picked
-    // out by the question it asks.
-    const dialog = within(screen.getByRole('dialog', { name: /verlieren ihre Auswahl/ }))
-    await fireEvent.click(dialog.getByRole('button', { name: 'Abbrechen' }))
+    await fireEvent.click(confirmation().getByRole('button', { name: 'Abbrechen' }))
     expect(store.lists).toHaveLength(1)
 
     await fireEvent.click(screen.getByRole('button', { name: 'Liste löschen' }))
-    await fireEvent.click(dialog.getByRole('button', { name: 'Liste löschen' }))
+    await fireEvent.click(confirmation().getByRole('button', { name: 'Liste löschen' }))
     expect(store.lists).toHaveLength(0)
 
     const freed = store.documents[0].columns.find((entry) => entry.title === 'Ort')!

@@ -10,6 +10,7 @@ export const strings = {
   removeRow: 'Zeile löschen',
   dragRow: 'Zeile verschieben',
   dragColumn: 'Spalte verschieben',
+  dragHelp: 'Zum Verschieben Leertaste drücken, dann Pfeiltasten. Escape bricht ab.',
   print: 'Drucken',
   undo: 'Rückgängig',
   redo: 'Wiederholen',

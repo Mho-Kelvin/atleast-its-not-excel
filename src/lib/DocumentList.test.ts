@@ -52,13 +52,17 @@ describe('DocumentList', () => {
   it('deletes only after the confirmation is accepted', async () => {
     const handlers = renderList()
 
+    // The dialog is mounted afresh each time it opens, so it is looked up again.
     await fireEvent.click(screen.getByRole('button', { name: 'Löschen' }))
-    const dialog = within(screen.getByRole('dialog'))
-    await fireEvent.click(dialog.getByRole('button', { name: 'Abbrechen' }))
+    await fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Abbrechen' }),
+    )
     expect(handlers.ondelete).not.toHaveBeenCalled()
 
     await fireEvent.click(screen.getByRole('button', { name: 'Löschen' }))
-    await fireEvent.click(dialog.getByRole('button', { name: 'Löschen' }))
+    await fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Löschen' }),
+    )
     expect(handlers.ondelete).toHaveBeenCalledOnce()
   })
 
