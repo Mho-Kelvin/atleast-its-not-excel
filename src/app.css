@@ -11,19 +11,12 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'IBM Plex Mono';
-  src: url('./assets/plex-mono-latin-400.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
-
 :root {
   /* Paper and ink. The grid is the ruling of a squared exercise book and the
      surface the app is drawn on lines up with it. */
   --paper: #fbfaf7;
   --paper-sunk: #f4f2ed;
-  --grid-line: #e7e9ee;
+  --grid-line: #f0f2f6;
   --rule: #c9cedb;
   --rule-strong: #8d97ad;
 

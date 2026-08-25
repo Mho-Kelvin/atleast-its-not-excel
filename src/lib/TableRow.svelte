@@ -121,6 +121,7 @@
 <style>
   td {
     border: 1px solid var(--rule);
+    background: #fff;
     padding: 0.3rem 0.4rem;
     text-align: left;
     vertical-align: top;
@@ -141,7 +142,6 @@
   .time-column {
     width: 6ch;
     white-space: nowrap;
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
     color: var(--ink-muted);
   }
@@ -158,7 +158,6 @@
   .group-end {
     width: 7ch;
     border-left: 1px dashed var(--rule);
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
   }
 

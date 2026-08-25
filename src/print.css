@@ -106,11 +106,11 @@
     font-weight: 600;
   }
 
-  /* Times and durations keep their own face on paper: the digits line up down
-     the column, which is the whole point of a schedule. */
+  /* Times and durations keep their digits aligned down the column, which is the
+     whole point of a schedule. Same face as the rest: a second one read as a
+     different kind of text on paper. */
   .time-column,
   td[data-column-type='duration'] {
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
   }
 
