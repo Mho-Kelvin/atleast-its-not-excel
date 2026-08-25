@@ -151,9 +151,25 @@ describe('the time group', () => {
 
     await openSettings('Uhrzeit')
 
-    expect((screen.getByLabelText('Spaltenname') as HTMLInputElement).value).toBe('Dauer')
-    await fireEvent.input(screen.getByLabelText('Spaltenname'), { target: { value: 'Länge' } })
+    expect((screen.getByLabelText('Name Dauer-Spalte') as HTMLInputElement).value).toBe('Dauer')
+    await fireEvent.input(screen.getByLabelText('Name Dauer-Spalte'), {
+      target: { value: 'Länge' },
+    })
     expect(findDurationColumn(plan.columns)?.title).toBe('Länge')
+    expect(headerNames()).toEqual(['Uhrzeit', 'Programmpunkt', 'Verantwortlich'])
+  })
+
+  it('renames the start-time cell without touching the duration column', async () => {
+    const plan = renderTable()
+
+    await openSettings('Uhrzeit')
+    await fireEvent.input(screen.getByLabelText('Name Uhrzeit-Spalte'), {
+      target: { value: 'Beginn' },
+    })
+
+    expect(plan.timeTitle).toBe('Beginn')
+    expect(findDurationColumn(plan.columns)?.title).toBe('Dauer')
+    expect(headerNames()).toEqual(['Beginn', 'Programmpunkt', 'Verantwortlich'])
   })
 
   it('deletes the pair together', async () => {

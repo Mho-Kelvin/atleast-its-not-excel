@@ -34,6 +34,7 @@
   const TYPES: ColumnType[] = ['text', 'longText', 'select', 'duration']
 
   const durationColumn = $derived(findDurationColumn(plan.columns))
+  const timeTitle = $derived(plan.timeTitle ?? strings.startTimeColumn)
   const documentStart = $derived(parseTimeOfDay(plan.startTime))
 
   const startTimes = $derived.by(() => {
@@ -123,7 +124,7 @@
         : columns.findIndex((column) => column.id === dragged)
     if (index < 0) return
 
-    const name = dragged === TIME_SLOT.id ? strings.startTimeColumn : columnName(columns[index])
+    const name = dragged === TIME_SLOT.id ? timeTitle : columnName(columns[index])
     announcement = phrase(name, index + 1, columns.length)
   }
 
@@ -227,7 +228,7 @@
           <!-- The start time carries the controls for the whole time group:
                grabbing or deleting it takes the duration column with it. -->
           <th class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
-            {@render columnControls(durationColumn!, strings.startTimeColumn, true)}
+            {@render columnControls(durationColumn!, timeTitle, true)}
           </th>
         {:else if slot.id === TRAILING_SLOT.id}
           <th class="no-print">
@@ -369,14 +370,50 @@
       <span class="panel no-print" class:from-right={column.id === plan.columns.at(-1)?.id}>
         <!-- Explicit for/id, not a wrapping <label>: a wrapped select pulls its
              own option text into its accessible name. -->
-        <label for="column-title-{column.id}">{strings.columnTitleLabel}</label>
-        <input
-          id="column-title-{column.id}"
-          type="text"
-          use:focusOnOpen
-          placeholder={strings.columnTitleLabel}
-          bind:value={column.title}
-        />
+        {#if timeGroup}
+          <label for="time-title-{column.id}">{strings.timeColumnTitleLabel}</label>
+          <input
+            id="time-title-{column.id}"
+            type="text"
+            use:focusOnOpen
+            placeholder={strings.startTimeColumn}
+            value={plan.timeTitle ?? ''}
+            oninput={(event) => (plan.timeTitle = event.currentTarget.value)}
+          />
+          <label class="check">
+            <input
+              type="checkbox"
+              checked={plan.hideTimeInPrint !== true}
+              onchange={(event) => (plan.hideTimeInPrint = !event.currentTarget.checked)}
+            />
+            {strings.printTime}
+          </label>
+
+          <label for="column-title-{column.id}">{strings.durationColumnTitleLabel}</label>
+          <input
+            id="column-title-{column.id}"
+            type="text"
+            placeholder={strings.columnTypes.duration}
+            bind:value={column.title}
+          />
+          <label class="check">
+            <input
+              type="checkbox"
+              checked={column.hideInPrint !== true}
+              onchange={(event) => (column.hideInPrint = !event.currentTarget.checked)}
+            />
+            {strings.printDuration}
+          </label>
+        {:else}
+          <label for="column-title-{column.id}">{strings.columnTitleLabel}</label>
+          <input
+            id="column-title-{column.id}"
+            type="text"
+            use:focusOnOpen
+            placeholder={strings.columnTitleLabel}
+            bind:value={column.title}
+          />
+        {/if}
 
         <label for="column-type-{column.id}">{strings.columnTypeLabel}</label>
         <select
@@ -405,24 +442,7 @@
           <span class="hint">{strings.durationColumnTaken}</span>
         {/if}
 
-        {#if timeGroup}
-          <label class="check">
-            <input
-              type="checkbox"
-              checked={plan.hideTimeInPrint !== true}
-              onchange={(event) => (plan.hideTimeInPrint = !event.currentTarget.checked)}
-            />
-            {strings.printTime}
-          </label>
-          <label class="check">
-            <input
-              type="checkbox"
-              checked={column.hideInPrint !== true}
-              onchange={(event) => (column.hideInPrint = !event.currentTarget.checked)}
-            />
-            {strings.printDuration}
-          </label>
-        {:else}
+        {#if !timeGroup}
           <label class="check">
             <input
               type="checkbox"

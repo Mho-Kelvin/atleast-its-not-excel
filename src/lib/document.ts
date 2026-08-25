@@ -159,6 +159,7 @@ export function duplicateDocument(source: ScheduleDocument, title: string): Sche
     startTime: source.startTime,
     columns,
     rows,
+    timeTitle: source.timeTitle,
     hideTimeInPrint: source.hideTimeInPrint,
     updatedAt: Date.now(),
   }

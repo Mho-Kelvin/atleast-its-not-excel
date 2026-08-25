@@ -32,6 +32,8 @@ export const strings = {
   removeColumn: 'Spalte löschen',
   columnSettings: 'Spalte bearbeiten',
   columnTitleLabel: 'Spaltenname',
+  timeColumnTitleLabel: 'Name Uhrzeit-Spalte',
+  durationColumnTitleLabel: 'Name Dauer-Spalte',
   columnTypeLabel: 'Typ',
   columnListLabel: 'Liste',
   noListChosen: 'Keine Liste',

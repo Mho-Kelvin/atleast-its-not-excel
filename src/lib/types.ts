@@ -36,7 +36,8 @@ export interface ScheduleDocument {
   startTime: string
   columns: Column[]
   rows: Row[]
-  /** The start-time cell is not a column, so its print flag lives here. */
+  /** The start-time cell is not a column, so its name and print flag live here. */
+  timeTitle?: string
   hideTimeInPrint?: boolean
   updatedAt: number
 }
