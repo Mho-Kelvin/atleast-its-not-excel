@@ -328,6 +328,76 @@ test('a cell grows with its text instead of cropping it', async ({ page }) => {
   await expect(cell).toHaveJSProperty('scrollHeight', Math.round(grown))
 })
 
+test('a click low in a tall row still lands in the cell it was aimed at', async ({ page }) => {
+  await openNewDocument(page)
+
+  await textInput(page, 1).fill(
+    'Ein ziemlich langer Text, der in dieser Spalte über mehrere Zeilen läuft',
+  )
+  const neighbour = page.locator('tbody tr:nth-child(1) td[data-column-type="text"]').nth(1)
+  const box = (await neighbour.boundingBox())!
+  expect(box.height).toBeGreaterThan(40)
+
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height - 4)
+
+  await expect(neighbour.locator('textarea')).toBeFocused()
+})
+
+test('a click low in a tall row reaches a dropdown too', async ({ page }) => {
+  await openNewDocument(page)
+  await page.getByTitle('Spalte hinzufügen').click()
+  await page.getByLabel('Spaltenname').fill('Ort')
+  await page.getByLabel('Typ').selectOption('select')
+  await page.keyboard.press('Escape')
+
+  await textInput(page, 1).fill(
+    'Ein ziemlich langer Text, der in dieser Spalte über mehrere Zeilen läuft',
+  )
+  const cell = page.locator('tbody tr:nth-child(1) td[data-column-type="select"]')
+  const box = (await cell.boundingBox())!
+  expect(box.height).toBeGreaterThan(40)
+
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height - 4)
+
+  await expect(cell.locator('select')).toBeFocused()
+})
+
+test('a chosen value starts where a typed one does', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Auswahllisten' }).click()
+  await page.getByLabel('Name der Liste').fill('Räume')
+  await page.getByRole('button', { name: 'Neue Liste' }).click()
+  await page.getByLabel('Wert: Räume').fill('Saal')
+  await page.getByRole('button', { name: 'Schließen' }).click()
+
+  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await page.getByTitle('Spalte hinzufügen').click()
+  await page.getByLabel('Spaltenname').fill('Ort')
+  await page.getByLabel('Typ').selectOption('select')
+  await page.getByLabel('Liste', { exact: true }).selectOption({ label: 'Räume' })
+
+  const row = page.locator('tbody tr:nth-child(1)')
+  await row.locator('td[data-column-type="select"] select').selectOption('Saal')
+
+  // Measured from each cell's own left edge: the columns sit at different
+  // places in the table, the value inside them should not.
+  const inset = (selector: string) =>
+    row
+      .locator(selector)
+      .first()
+      .evaluate((node: HTMLElement) => {
+        const cell = node.closest('td')!.getBoundingClientRect()
+        const style = getComputedStyle(node)
+        const own = node.getBoundingClientRect().x - cell.x
+        // A select draws its value past its own box; a textarea starts at it.
+        return node instanceof HTMLSelectElement ? own + 6 : own + parseFloat(style.paddingLeft)
+      })
+
+  const typed = await inset('td[data-column-type="text"] textarea')
+  const chosen = await inset('td[data-column-type="select"] select')
+  expect(Math.abs(chosen - typed)).toBeLessThan(1)
+})
+
 test('a dropdown shows its longest value in full', async ({ page }) => {
   // Narrow on purpose: with room to spare every layout looks fine, the crop
   // only shows up once the columns compete for the width.

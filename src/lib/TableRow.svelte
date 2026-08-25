@@ -47,6 +47,20 @@
   function isUnreadableDuration(text: string): boolean {
     return text.trim() !== '' && parseDuration(text) === null
   }
+
+  /** A field is only as tall as its own text, so in a row made tall by another
+      cell the click below it lands on the cell and nowhere else. */
+  function focusField(event: MouseEvent): void {
+    const target = event.target as HTMLElement
+    if (target.closest('textarea, select, button')) return
+
+    const field = target.closest('td')?.querySelector('textarea, select')
+    if (!(field instanceof HTMLElement)) return
+    field.focus()
+    // Chrome only, and only inside the click that focused it; elsewhere the
+    // dropdown is left to the second click.
+    if (field instanceof HTMLSelectElement) field.showPicker?.()
+  }
 </script>
 
 <tr class:draft>
@@ -89,6 +103,7 @@
         data-column-type={column.type}
         class:group-end={column.type === 'duration'}
         class:print-hidden={column.hideInPrint}
+        onclick={focusField}
       >
         {#if column.type === 'select' && !isCustomCell(row, column, row.cells[column.id] ?? '')}
           <select
@@ -128,6 +143,11 @@
     /* One square of the ruled sheet, so the rows sit on the grid behind them. */
     height: var(--square);
     transition: background var(--duration);
+  }
+
+  td[data-column-type='text'],
+  td[data-column-type='duration'] {
+    cursor: text;
   }
 
   tr:hover td {
@@ -229,6 +249,10 @@
     background: transparent;
     font: inherit;
     color: inherit;
+    /* A select insets its value past its own padding box, so the box is pulled
+       back by that inset and the value lines up with the text cells.
+       ponytail: measured in Chrome, re-measure if another browser matters. */
+    margin-left: -6px;
   }
 
   td select:focus-visible {
