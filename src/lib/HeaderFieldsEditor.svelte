@@ -27,11 +27,15 @@
         bind:value={field.value}
       />
       {#if !draft}
+        {@const named =
+          field.label.trim() === ''
+            ? strings.removeHeaderField
+            : strings.removeHeaderFieldNamed(field.label.trim())}
         <button
           type="button"
           class="icon no-print"
-          title={strings.removeHeaderField}
-          aria-label={strings.removeHeaderField}
+          title={named}
+          aria-label={named}
           onclick={() => plan.headerFields.splice(index, 1)}
         >
           <Icon name="close" size={16} />
@@ -46,7 +50,7 @@
      block, so the values line up whatever the labels say. */
   .field {
     display: grid;
-    grid-template-columns: 9rem 1fr auto;
+    grid-template-columns: 9rem minmax(0, 26rem) auto;
     align-items: center;
     gap: var(--space-2);
     padding: 0.1rem 0;
@@ -83,7 +87,7 @@
     padding: var(--space-1);
     border-color: transparent;
     background: none;
-    color: var(--ink-faint);
+    color: var(--ink-muted);
   }
 
   .icon:hover {
@@ -102,7 +106,7 @@
     }
 
     .field {
-      grid-template-columns: auto 1fr;
+      grid-template-columns: auto 1fr auto;
       gap: 0 3mm;
       padding: 0;
     }

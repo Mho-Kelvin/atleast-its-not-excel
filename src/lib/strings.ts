@@ -58,6 +58,7 @@ export const strings = {
   confirmDeleteList: 'Diese Liste löschen? Spalten, die sie nutzen, verlieren ihre Auswahl.',
 
   removeHeaderField: 'Feld löschen',
+  removeHeaderFieldNamed: (label: string) => `Feld „${label}“ löschen`,
   headerFieldLabel: 'Bezeichnung',
   headerFieldValue: 'Inhalt',
 

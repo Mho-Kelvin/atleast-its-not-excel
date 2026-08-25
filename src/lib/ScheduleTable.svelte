@@ -84,17 +84,33 @@
   let headerRow: HTMLTableRowElement
   let announcement = $state('')
   let dragging = false
-  // The rendered copy of the same flag: a sticky cell detaches from its column
-  // while the library transforms its siblings, so sticky is off for the drag.
-  let draggingNow = $state(false)
   let openColumnId = $state<string | null>(null)
 
   function setDragging(active: boolean): void {
     if (dragging === active) return
     dragging = active
-    draggingNow = active
     ondragstatechange?.(active)
   }
+
+  let scroller: HTMLDivElement
+  let moreLeft = $state(false)
+  let moreRight = $state(false)
+
+  /* The usual pure-CSS scroll shadows sit in the container's background, where
+     the table's opaque cells cover them, so the edges are measured instead. */
+  function measureEdges(): void {
+    if (!scroller) return
+    const furthest = scroller.scrollWidth - scroller.clientWidth
+    moreLeft = scroller.scrollLeft > 1
+    moreRight = scroller.scrollLeft < furthest - 1
+  }
+
+  // Read on purpose: adding a column or a row changes how far the table reaches
+  // without the container ever resizing.
+  $effect(() => {
+    const shape = `${plan.columns.length}:${plan.rows.length}`
+    if (shape !== '') measureEdges()
+  })
 
   function announce(text: string | null): void {
     if (text !== null) announcement = text
@@ -150,94 +166,95 @@
   }
 </script>
 
-<svelte:window onkeydown={onWindowKeydown} />
+<svelte:window onkeydown={onWindowKeydown} onresize={measureEdges} />
 <svelte:document onpointerdown={onDocumentPointerDown} />
 
 <span class="announcer no-print" aria-live="polite">{announcement}</span>
 <span id="drag-help" hidden>{strings.dragHelp}</span>
 
 <!-- The table scrolls inside its own box on a narrow screen; the page itself
-     never does. -->
-<div class="scroller" class:dragging={draggingNow}>
-  <table>
-    <thead>
-      <tr
-        bind:this={headerRow}
+     never does. The edges fade while there is more table on that side. -->
+<div class="frame" class:more-left={moreLeft} class:more-right={moreRight}>
+  <div class="scroller" bind:this={scroller} onscroll={measureEdges}>
+    <table>
+      <thead>
+        <tr
+          bind:this={headerRow}
+          use:dragHandleZone={{
+            items: slots,
+            type: 'columns',
+            flipDurationMs: 0,
+            autoAriaDisabled: true,
+          }}
+          onconsider={onColumnsReordered}
+          onfinalize={onColumnsDropped}
+        >
+          {#each slots as slot (slot.id)}
+            {#if slot.id === HANDLE_SLOT.id}
+              <th class="no-print handle-column"></th>
+            {:else if isDragPlaceholder(slot)}
+              <th class="no-print"></th>
+            {:else if slot.id === TIME_SLOT.id}
+              <th class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
+                {@render settings(durationColumn!, timeTitle, true)}
+              </th>
+            {:else if slot.id === TRAILING_SLOT.id}
+              <th class="no-print">
+                <button
+                  type="button"
+                  class="add-column"
+                  title={strings.addColumn}
+                  aria-label={strings.addColumn}
+                  onclick={addColumnAtEnd}
+                >
+                  <Icon name="add" size={16} />
+                </button>
+              </th>
+            {:else if asColumn(slot).type === 'duration'}
+              {@const column = asColumn(slot)}
+              <th class="group-end" class:print-hidden={column.hideInPrint}
+                >{column.title}<PrintMark hidden={column.hideInPrint} /></th
+              >
+            {:else}
+              {@const column = asColumn(slot)}
+              <th class:print-hidden={column.hideInPrint}
+                >{@render settings(column, column.title, false)}</th
+              >
+            {/if}
+          {/each}
+        </tr>
+      </thead>
+      <tbody
         use:dragHandleZone={{
-          items: slots,
-          type: 'columns',
+          items: plan.rows,
+          type: 'rows',
           flipDurationMs: 0,
           autoAriaDisabled: true,
         }}
-        onconsider={onColumnsReordered}
-        onfinalize={onColumnsDropped}
+        onconsider={onRowsReordered}
+        onfinalize={onRowsDropped}
       >
-        {#each slots as slot (slot.id)}
-          {#if slot.id === HANDLE_SLOT.id}
-            <th class="no-print handle-column"></th>
-          {:else if isDragPlaceholder(slot)}
-            <th class="no-print"></th>
-          {:else if slot.id === TIME_SLOT.id}
-            <th class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
-              {@render settings(durationColumn!, timeTitle, true)}
-            </th>
-          {:else if slot.id === TRAILING_SLOT.id}
-            <th class="no-print">
-              <button
-                type="button"
-                class="add-column"
-                title={strings.addColumn}
-                aria-label={strings.addColumn}
-                onclick={addColumnAtEnd}
-              >
-                <Icon name="add" size={16} />
-              </button>
-            </th>
-          {:else if asColumn(slot).type === 'duration'}
-            {@const column = asColumn(slot)}
-            <th class="group-end" class:print-hidden={column.hideInPrint}
-              >{column.title}<PrintMark hidden={column.hideInPrint} /></th
-            >
+        {#each plan.rows as row, rowIndex (row.id)}
+          {#if isDragPlaceholder(row)}
+            <tr class="no-print"></tr>
           {:else}
-            {@const column = asColumn(slot)}
-            <th class:print-hidden={column.hideInPrint}
-              >{@render settings(column, column.title, false)}</th
-            >
+            <TableRow
+              {row}
+              {slots}
+              {lists}
+              startTime={startTimes[rowIndex]}
+              draft={rowIndex === plan.rows.length - 1 && isRowEmpty(row)}
+              hideTimeInPrint={plan.hideTimeInPrint}
+              {isCustomCell}
+              onchoose={chooseValue}
+              onleavecustom={leaveCustom}
+              onremove={() => plan.rows.splice(rowIndex, 1)}
+            />
           {/if}
         {/each}
-      </tr>
-    </thead>
-    <tbody
-      use:dragHandleZone={{
-        items: plan.rows,
-        type: 'rows',
-        flipDurationMs: 0,
-        autoAriaDisabled: true,
-      }}
-      onconsider={onRowsReordered}
-      onfinalize={onRowsDropped}
-    >
-      {#each plan.rows as row, rowIndex (row.id)}
-        {#if isDragPlaceholder(row)}
-          <tr class="no-print"></tr>
-        {:else}
-          <TableRow
-            {row}
-            {slots}
-            {lists}
-            startTime={startTimes[rowIndex]}
-            draft={rowIndex === plan.rows.length - 1 && isRowEmpty(row)}
-            hideTimeInPrint={plan.hideTimeInPrint}
-            dragging={draggingNow}
-            {isCustomCell}
-            onchoose={chooseValue}
-            onleavecustom={leaveCustom}
-            onremove={() => plan.rows.splice(rowIndex, 1)}
-          />
-        {/if}
-      {/each}
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 {#snippet settings(column: Column, label: string, timeGroup: boolean)}
@@ -257,8 +274,41 @@
 <style>
   /* Below the breakpoint the table keeps its own width and scrolls inside this
      box, so a narrow window never scrolls the page sideways. */
+  .frame {
+    position: relative;
+  }
+
   .scroller {
     overflow-x: auto;
+  }
+
+  /* Drawn over the table, not behind it: an opaque cell would swallow a
+     background shadow. */
+  .frame::before,
+  .frame::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration);
+  }
+
+  .frame::before {
+    left: 0;
+    background: linear-gradient(to right, rgb(31 58 99 / 0.22), transparent);
+  }
+
+  .frame::after {
+    right: 0;
+    background: linear-gradient(to left, rgb(31 58 99 / 0.22), transparent);
+  }
+
+  .frame.more-left::before,
+  .frame.more-right::after {
+    opacity: 1;
   }
 
   table {
@@ -329,20 +379,14 @@
     color: var(--accent);
   }
 
-  /* The times stay in view while the rest of a wide table scrolls past. The
-     body cells carry the same rule in TableRow, where their markup lives. */
-  @media (max-width: 51rem) {
-    .scroller:not(.dragging) .time-column {
-      position: sticky;
-      left: 0;
-      z-index: 1;
-      background: var(--paper-sunk);
-    }
-  }
-
   @media print {
     .scroller {
       overflow-x: visible;
+    }
+
+    .frame::before,
+    .frame::after {
+      display: none;
     }
 
     th {

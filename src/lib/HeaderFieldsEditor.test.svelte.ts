@@ -15,7 +15,7 @@ describe('HeaderFieldsEditor', () => {
   it('leaves the trailing draft without a delete button, so only real fields can go', () => {
     renderEditor([createHeaderField('Ort'), createHeaderField('')])
 
-    expect(screen.getAllByTitle('Feld löschen')).toHaveLength(1)
+    expect(screen.getAllByTitle(/löschen/)).toHaveLength(1)
   })
 
   it('writes the label and the value back to the document', async () => {
@@ -30,7 +30,8 @@ describe('HeaderFieldsEditor', () => {
   it('removes a field', async () => {
     const plan = renderEditor()
 
-    await fireEvent.click(screen.getByTitle('Feld löschen'))
+    // The button names the field it deletes, so it can be told from its neighbours.
+    await fireEvent.click(screen.getByTitle('Feld „Ort“ löschen'))
 
     expect(plan.headerFields).toHaveLength(0)
   })

@@ -33,6 +33,8 @@
 <span class="field" data-value={value ?? ''}>
   <textarea
     rows="1"
+    data-lt-active="false"
+    data-gramm="false"
     class:cell-invalid={invalid}
     title={invalid ? strings.durationInvalid : ''}
     use:focusIfNew

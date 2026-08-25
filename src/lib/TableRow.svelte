@@ -22,7 +22,6 @@
     startTime,
     draft,
     hideTimeInPrint,
-    dragging,
     isCustomCell,
     onchoose,
     onleavecustom,
@@ -35,9 +34,6 @@
     /** The last row, still empty: an offer to type, so it carries no delete. */
     draft: boolean
     hideTimeInPrint: boolean | undefined
-    /** A sticky cell detaches from its column while the drag library transforms
-        its siblings, so the sticky time column is off for the length of a drag. */
-    dragging: boolean
     isCustomCell: (row: Row, column: Column, value: string) => boolean
     onchoose: (row: Row, column: Column, chosen: string) => void
     onleavecustom: (row: Row, column: Column) => void
@@ -53,7 +49,7 @@
   }
 </script>
 
-<tr class:draft class:dragging>
+<tr class:draft>
   {#each slots as slot (slot.id)}
     {#if isDragPlaceholder(slot)}
       <td class="no-print"></td>
@@ -66,7 +62,7 @@
           aria-label={strings.dragRow}
           aria-describedby="drag-help"
         >
-          <Icon name="grip" size={16} />
+          <Icon name="grip" size={18} />
         </span>
       </td>
     {:else if slot.id === TIME_SLOT.id}
@@ -171,8 +167,12 @@
     display: flex;
     justify-content: center;
     cursor: grab;
-    color: var(--ink-faint);
+    color: var(--ink-muted);
     user-select: none;
+  }
+
+  .drag-handle:hover {
+    color: var(--accent);
   }
 
   .trailing {
@@ -191,7 +191,7 @@
 
   tr:hover .icon,
   .icon:focus-visible {
-    color: var(--ink-faint);
+    color: var(--ink-muted);
   }
 
   .icon:hover {
@@ -219,15 +219,6 @@
   td select:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
-  }
-
-  @media (max-width: 51rem) {
-    tr:not(.dragging) .time-column {
-      position: sticky;
-      left: 0;
-      z-index: 1;
-      background: #fff;
-    }
   }
 
   @media print {

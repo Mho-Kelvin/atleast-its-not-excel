@@ -345,3 +345,25 @@ test('a column can be moved with the keyboard alone', async ({ page }) => {
 
   await expect(headings).toHaveText(['Uhrzeit', 'Verantwortlich', 'Programmpunkt'])
 })
+
+test('a table wider than its box says so at the edge it continues past', async ({ page }) => {
+  await page.setViewportSize({ width: 720, height: 700 })
+  await openNewDocument(page)
+
+  const frame = page.locator('.frame')
+  await expect(frame).not.toHaveClass(/more-right/)
+
+  for (const name of ['Raum', 'Technik', 'Material', 'Bemerkung']) {
+    await page.getByTitle('Spalte hinzufügen').click()
+    await page.getByLabel('Spaltenname').fill(name)
+    await page.keyboard.press('Escape')
+  }
+
+  await frame.locator('.scroller').evaluate((node) => node.scrollTo({ left: 0 }))
+  await expect(frame).toHaveClass(/more-right/)
+  await expect(frame).not.toHaveClass(/more-left/)
+
+  await frame.locator('.scroller').evaluate((node) => node.scrollTo({ left: node.scrollWidth }))
+  await expect(frame).toHaveClass(/more-left/)
+  await expect(frame).not.toHaveClass(/more-right/)
+})

@@ -93,7 +93,7 @@
   aria-label={strings.dragColumn}
   aria-describedby="drag-help"
   onpointerdown={ongrab}
-  onkeydown={ongrab}><Icon name="grip" size={16} /></span
+  onkeydown={ongrab}><Icon name="grip" size={18} /></span
 ><span class="column-settings">
   <button
     type="button"
@@ -226,8 +226,12 @@
     display: inline-flex;
     vertical-align: middle;
     cursor: grab;
-    color: var(--ink-faint);
+    color: var(--ink-muted);
     user-select: none;
+  }
+
+  .drag-handle:hover {
+    color: var(--accent);
   }
 
   .column-name {
