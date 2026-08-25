@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration, parseDuration } from './duration'
+import { parseDuration } from './duration'
 
 describe('parseDuration', () => {
   it('reads a bare number as minutes', () => {
@@ -52,13 +52,5 @@ describe('parseDuration', () => {
   it('rejects a repeated unit rather than adding it twice', () => {
     expect(parseDuration('1h 2h')).toBeNull()
     expect(parseDuration('30 15')).toBeNull()
-  })
-})
-
-describe('formatDuration', () => {
-  it('renders minutes, whole hours and mixed values', () => {
-    expect(formatDuration(15)).toBe('15 min')
-    expect(formatDuration(60)).toBe('1 h')
-    expect(formatDuration(90)).toBe('1:30 h')
   })
 })

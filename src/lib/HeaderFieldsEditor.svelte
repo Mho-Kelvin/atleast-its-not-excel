@@ -1,20 +1,18 @@
 <script lang="ts">
+  import { isHeaderFieldEmpty } from './document'
   import { strings } from './strings'
   import type { ScheduleDocument } from './types'
 
   let { plan = $bindable() }: { plan: ScheduleDocument } = $props()
-
-  function isEmpty(label: string, value: string): boolean {
-    return label.trim() === '' && value.trim() === ''
-  }
 </script>
 
 <section>
   {#each plan.headerFields as field, index (field.id)}
     <!-- The last empty field is the draft: it becomes a real field as soon as
          someone types in it, and a fresh draft takes its place below. -->
-    {@const draft = index === plan.headerFields.length - 1 && isEmpty(field.label, field.value)}
-    <div class="field" class:empty={isEmpty(field.label, field.value)}>
+    {@const empty = isHeaderFieldEmpty(field)}
+    {@const draft = index === plan.headerFields.length - 1 && empty}
+    <div class="field" class:empty>
       <input
         type="text"
         class="label"

@@ -1,21 +1,17 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity'
   import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action'
+  import { addColumn, createColumn, findDurationColumn, isRowEmpty, removeColumn } from './document'
   import {
-    addColumn,
     columnsFromDndItems,
-    createColumn,
-    findDurationColumn,
     headerSlots,
     isDragPlaceholder,
-    isRowEmpty,
-    removeColumn,
     rowsFromDndItems,
     HANDLE_SLOT,
     TIME_SLOT,
     TRAILING_SLOT,
     type HeaderSlot,
-  } from './document'
+  } from './slots'
   import { parseDuration } from './duration'
   import { CUSTOM_VALUE, listValues } from './lists'
   import { computeStartTimes, formatTimeOfDay, parseTimeOfDay } from './schedule'

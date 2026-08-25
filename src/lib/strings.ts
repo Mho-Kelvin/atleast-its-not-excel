@@ -1,7 +1,5 @@
 /** Every user-visible string in the app. Nothing German belongs outside this file. */
 export const strings = {
-  appTitle: 'Ablaufplan',
-
   documentTitleLabel: 'Titel',
   documentTitlePlaceholder: 'Ohne Titel',
   startTimeLabel: 'Beginn',
@@ -19,7 +17,6 @@ export const strings = {
 
   documents: 'Dokumente',
   newDocument: 'Neues Dokument',
-  openDocument: 'Öffnen',
   duplicateDocument: 'Duplizieren',
   deleteDocument: 'Löschen',
   copySuffix: '(Kopie)',
@@ -55,7 +52,6 @@ export const strings = {
   noLists: 'Noch keine Listen.',
   confirmDeleteList: 'Diese Liste löschen? Spalten, die sie nutzen, verlieren ihre Auswahl.',
 
-  headerFields: 'Kopfzeile',
   removeHeaderField: 'Feld löschen',
   headerFieldLabel: 'Bezeichnung',
   headerFieldValue: 'Inhalt',

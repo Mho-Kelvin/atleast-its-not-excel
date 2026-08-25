@@ -42,12 +42,3 @@ export function parseDuration(input: string): number | null {
   if (hours === null && minutes === null) return null
   return (hours ?? 0) * 60 + (minutes ?? 0)
 }
-
-/** Renders minutes back as "90" / "1:30" style text for display next to the input. */
-export function formatDuration(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  if (hours === 0) return `${minutes} min`
-  if (minutes === 0) return `${hours} h`
-  return `${hours}:${String(minutes).padStart(2, '0')} h`
-}
