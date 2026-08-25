@@ -12,9 +12,9 @@ afterEach(() => {
 
 function renderManager(initial: Store = emptyStore()) {
   const store = $state(initial)
-  const onback = vi.fn()
-  render(ListManager, { props: { store, onback } })
-  return { store, onback }
+  const onclose = vi.fn()
+  render(ListManager, { props: { store, open: true, onclose } })
+  return { store, onclose }
 }
 
 async function addStartTime(time: string, name: string): Promise<void> {
@@ -95,7 +95,9 @@ describe('ListManager', () => {
     const { store } = renderManager(initial)
 
     await fireEvent.click(screen.getByRole('button', { name: 'Liste löschen' }))
-    const dialog = within(screen.getByRole('dialog'))
+    // The lists dialog is a dialog of its own, so the confirmation is picked
+    // out by the question it asks.
+    const dialog = within(screen.getByRole('dialog', { name: /verlieren ihre Auswahl/ }))
     await fireEvent.click(dialog.getByRole('button', { name: 'Abbrechen' }))
     expect(store.lists).toHaveLength(1)
 
@@ -147,11 +149,18 @@ describe('ListManager', () => {
     expect(store.startTimes).toEqual([{ time: '10:00' }])
   })
 
-  it('goes back when asked', async () => {
-    const { onback } = renderManager()
+  it('closes when asked', async () => {
+    const { onclose } = renderManager()
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Zurück' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Schließen' }))
 
-    expect(onback).toHaveBeenCalledOnce()
+    expect(onclose).toHaveBeenCalledOnce()
+  })
+
+  it('stays shut until it is opened', () => {
+    const store = $state(emptyStore())
+    render(ListManager, { props: { store, open: false, onclose: vi.fn() } })
+
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })

@@ -44,6 +44,7 @@ export const strings = {
   confirmDeleteColumn: 'Diese Spalte mit allen Inhalten löschen?',
 
   lists: 'Auswahllisten',
+  editLists: 'Listen bearbeiten',
   startTimeList: 'Startzeiten',
   startTimeNameLabel: 'Bezeichnung (optional)',
   newList: 'Neue Liste',
@@ -66,6 +67,12 @@ export const strings = {
     duration: 'Dauer',
   },
 } as const
+
+/** Counted things, which German declines. */
+export const counts = {
+  documentShape: (rows: number, columns: number) =>
+    `${rows} ${rows === 1 ? 'Zeile' : 'Zeilen'} · ${columns} ${columns === 1 ? 'Spalte' : 'Spalten'}`,
+}
 
 /**
  * Spoken while dragging. The library's own announcements are switched off,

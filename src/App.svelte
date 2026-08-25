@@ -3,10 +3,11 @@
   import Editor from './lib/Editor.svelte'
   import ListManager from './lib/ListManager.svelte'
   import { createDocument, duplicateDocument } from './lib/document'
+  import { closeLists, listsDialog, openLists } from './lib/listsDialog.svelte'
   import { loadStore, saveStore } from './lib/storage'
   import { strings } from './lib/strings'
 
-  type View = 'documents' | 'editor' | 'lists'
+  type View = 'documents' | 'editor'
 
   let store = $state(loadStore())
   let view = $state<View>('documents')
@@ -15,7 +16,7 @@
 
   const currentIndex = $derived(store.documents.findIndex((entry) => entry.id === currentId))
 
-  // localStorage on every keystroke. ponytail: no debounce, add one if a big
+  // localStorage on every keystroke. NOTE: no debounce, add one if a big
   // document ever makes typing feel heavy.
   function persist(): void {
     saveFailed = !saveStore($state.snapshot(store))
@@ -61,10 +62,8 @@
       oncreate={create}
       onduplicate={duplicate}
       ondelete={remove}
-      onmanagelists={() => (view = 'lists')}
+      onmanagelists={() => openLists()}
     />
-  {:else if view === 'lists'}
-    <ListManager bind:store onback={() => (view = 'documents')} />
   {:else if currentIndex >= 0}
     <!-- The editor is mounted per document, so the undo history and the custom
          start time it holds die with it when one is opened or closed. -->
@@ -76,6 +75,15 @@
     />
   {/if}
 </main>
+
+<!-- Outside the view switch: the same dialog serves the home screen and the
+     column settings panel inside a document. -->
+<ListManager
+  bind:store
+  open={listsDialog.open}
+  focusListId={listsDialog.focusListId}
+  onclose={closeLists}
+/>
 
 <style>
   main {

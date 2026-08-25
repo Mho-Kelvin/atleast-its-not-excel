@@ -4,6 +4,7 @@
   import Icon from './Icon.svelte'
   import PrintMark from './PrintMark.svelte'
   import { findDurationColumn, removeColumn } from './document'
+  import { openLists } from './listsDialog.svelte'
   import { strings } from './strings'
   import type { Column, ColumnType, ScheduleDocument, SelectList } from './types'
 
@@ -144,12 +145,23 @@
 
       {#if column.type === 'select'}
         <label for="column-list-{column.id}">{strings.columnListLabel}</label>
-        <select id="column-list-{column.id}" bind:value={column.listId}>
-          <option value={undefined}>{strings.noListChosen}</option>
-          {#each lists as list (list.id)}
-            <option value={list.id}>{list.name}</option>
-          {/each}
-        </select>
+        <span class="row">
+          <select id="column-list-{column.id}" bind:value={column.listId}>
+            <option value={undefined}>{strings.noListChosen}</option>
+            {#each lists as list (list.id)}
+              <option value={list.id}>{list.name}</option>
+            {/each}
+          </select>
+          <button
+            type="button"
+            class="icon"
+            title={strings.editLists}
+            aria-label={strings.editLists}
+            onclick={() => openLists(column.listId ?? null)}
+          >
+            <Icon name="settings" size={18} />
+          </button>
+        </span>
       {/if}
 
       {#if !canBecome('duration')}

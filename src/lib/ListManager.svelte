@@ -1,11 +1,34 @@
 <script lang="ts">
   import ConfirmDialog from './ConfirmDialog.svelte'
+  import Icon from './Icon.svelte'
   import { createList, removeList } from './lists'
   import { formatStartTime } from './schedule'
   import { strings } from './strings'
   import type { SelectList, Store } from './types'
 
-  let { store = $bindable(), onback }: { store: Store; onback: () => void } = $props()
+  let {
+    store = $bindable(),
+    open,
+    onclose,
+    focusListId = null,
+  }: {
+    store: Store
+    open: boolean
+    onclose: () => void
+    /** Set when the dialog was opened from a column, so that list is scrolled to. */
+    focusListId?: string | null
+  } = $props()
+
+  let dialog: HTMLDialogElement
+
+  $effect(() => {
+    if (open && !dialog.open) dialog.showModal()
+    if (!open && dialog.open) dialog.close()
+  })
+
+  function scrollToFocused(node: HTMLElement, id: string | undefined): void {
+    if (id !== undefined && id === focusListId) node.scrollIntoView({ block: 'center' })
+  }
 
   let newListName = $state('')
   let newValues = $state<Record<string, string>>({})
@@ -45,9 +68,19 @@
   }
 </script>
 
-<section>
-  <h1>{strings.lists}</h1>
-  <button type="button" onclick={onback}>{strings.back}</button>
+<dialog bind:this={dialog} class="no-print" aria-labelledby="lists-title" oncancel={onclose}>
+  <div class="bar">
+    <h1 id="lists-title">{strings.lists}</h1>
+    <button
+      type="button"
+      class="icon"
+      title={strings.close}
+      aria-label={strings.close}
+      onclick={onclose}
+    >
+      <Icon name="close" />
+    </button>
+  </div>
 
   <div class="add">
     <input
@@ -56,7 +89,10 @@
       placeholder={strings.listNameLabel}
       bind:value={newListName}
     />
-    <button type="button" onclick={add}>{strings.newList}</button>
+    <button type="button" class="primary" onclick={add}>
+      <Icon name="add" size={18} />
+      {strings.newList}
+    </button>
   </div>
 
   <article>
@@ -68,9 +104,7 @@
       {#each store.startTimes as entry, index (entry.time)}
         <li>
           <span>{formatStartTime(entry)}</span>
-          <button type="button" onclick={() => store.startTimes.splice(index, 1)}>
-            {strings.removeValue}
-          </button>
+          {@render removeValueButton(() => store.startTimes.splice(index, 1))}
         </li>
       {/each}
     </ul>
@@ -93,7 +127,7 @@
           }
         }}
       />
-      <button type="button" onclick={addStartTime}>{strings.addValue}</button>
+      {@render addValueButton(addStartTime)}
     </div>
   </article>
 
@@ -102,19 +136,25 @@
   {/if}
 
   {#each store.lists as list (list.id)}
-    <article>
+    <article use:scrollToFocused={list.id}>
       <header>
         <input type="text" aria-label={strings.listNameLabel} bind:value={list.name} />
-        <button type="button" onclick={() => (removing = list)}>{strings.deleteList}</button>
+        <button
+          type="button"
+          class="icon danger"
+          title={strings.deleteList}
+          aria-label={strings.deleteList}
+          onclick={() => (removing = list)}
+        >
+          <Icon name="trash" size={18} />
+        </button>
       </header>
 
       <ul>
         {#each list.values as value, index (value)}
           <li>
             <span>{value}</span>
-            <button type="button" onclick={() => list.values.splice(index, 1)}>
-              {strings.removeValue}
-            </button>
+            {@render removeValueButton(() => list.values.splice(index, 1))}
           </li>
         {/each}
       </ul>
@@ -131,11 +171,35 @@
             }
           }}
         />
-        <button type="button" onclick={() => addValue(list)}>{strings.addValue}</button>
+        {@render addValueButton(() => addValue(list))}
       </div>
     </article>
   {/each}
-</section>
+</dialog>
+
+{#snippet addValueButton(onclick: () => void)}
+  <button
+    type="button"
+    class="icon"
+    title={strings.addValue}
+    aria-label={strings.addValue}
+    {onclick}
+  >
+    <Icon name="add" size={18} />
+  </button>
+{/snippet}
+
+{#snippet removeValueButton(onclick: () => void)}
+  <button
+    type="button"
+    class="icon danger"
+    title={strings.removeValue}
+    aria-label={strings.removeValue}
+    {onclick}
+  >
+    <Icon name="trash" size={16} />
+  </button>
+{/snippet}
 
 <ConfirmDialog
   open={removing !== null}
@@ -146,15 +210,55 @@
 />
 
 <style>
+  dialog {
+    width: min(34rem, 100vw - 2rem);
+    max-height: min(44rem, 100vh - 4rem);
+    padding: var(--space-5);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow-lifted);
+  }
+
+  dialog[open] {
+    animation: appear 150ms ease-out;
+  }
+
+  dialog::backdrop {
+    background: rgb(31 58 99 / 0.25);
+  }
+
+  @keyframes appear {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  h1 {
+    margin: 0;
+  }
+
   article {
-    border: 1px solid #ddd;
-    padding: 0.75rem;
-    margin-top: 1rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: #fff;
+    padding: var(--space-3);
+    margin-top: var(--space-4);
   }
 
   header {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
     align-items: center;
   }
 
@@ -171,24 +275,70 @@
   ul {
     list-style: none;
     padding: 0;
-    margin: 0.5rem 0;
+    margin: var(--space-2) 0;
   }
 
   li {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-2);
     padding: 0.15rem 0;
+    border-bottom: 1px solid var(--grid-line);
+  }
+
+  li:last-child {
+    border-bottom: none;
   }
 
   .add {
     display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  .add input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .primary {
+    flex: none;
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .primary:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .icon {
+    flex: none;
+    padding: var(--space-2);
+    border-color: transparent;
+    background: none;
+    color: var(--ink-muted);
+  }
+
+  .icon:hover {
+    background: var(--accent-sunk);
+    border-color: transparent;
+    color: var(--accent);
+  }
+
+  .danger:hover {
+    background: var(--red-sunk);
+    color: var(--red);
+  }
+
+  .danger:focus-visible {
+    outline-color: var(--red);
   }
 
   .empty {
-    color: #666;
+    color: var(--ink-faint);
+    margin-top: var(--space-4);
   }
 </style>

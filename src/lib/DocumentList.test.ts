@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import DocumentList from './DocumentList.svelte'
-import { createDocument } from './document'
+import { createDocument, ensureDrafts } from './document'
 
 function documentNamed(title: string, updatedAt: number) {
   const entry = createDocument(title)
@@ -29,8 +29,11 @@ describe('DocumentList', () => {
   it('lists the most recently changed document first', () => {
     renderList([documentNamed('Älter', 1000), documentNamed('Neuer', 2000)])
 
-    const titles = screen.getAllByRole('button', { name: /Älter|Neuer/ })
-    expect(titles.map((button) => button.textContent?.trim())).toEqual(['Neuer', 'Älter'])
+    const cards = screen.getAllByRole('button', { name: /Älter|Neuer/ })
+    const titles = cards.map((card) =>
+      document.getElementById(card.getAttribute('aria-labelledby')!)?.textContent?.trim(),
+    )
+    expect(titles).toEqual(['Neuer', 'Älter'])
   })
 
   it('says so when there is nothing yet', () => {
@@ -57,6 +60,22 @@ describe('DocumentList', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Löschen' }))
     await fireEvent.click(dialog.getByRole('button', { name: 'Löschen' }))
     expect(handlers.ondelete).toHaveBeenCalledOnce()
+  })
+
+  it('counts the real rows, not the draft one at the end', () => {
+    const entry = documentNamed('Ablauf', Date.now())
+    entry.rows[0].cells[entry.columns[1].id] = 'Einlass'
+    ensureDrafts(entry)
+    renderList([entry])
+
+    expect(screen.getByText('1 Zeile · 3 Spalten')).toBeTruthy()
+  })
+
+  it('says when a document was last changed in words', () => {
+    const yesterday = Date.now() - 24 * 60 * 60 * 1000
+    renderList([documentNamed('Ablauf', yesterday)])
+
+    expect(screen.getByText('gestern')).toBeTruthy()
   })
 
   it('falls back to the placeholder for an untitled document', () => {

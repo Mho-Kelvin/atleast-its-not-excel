@@ -1,6 +1,9 @@
 <script lang="ts">
   import ConfirmDialog from './ConfirmDialog.svelte'
-  import { strings } from './strings'
+  import Icon from './Icon.svelte'
+  import { formatChanged } from './dates'
+  import { isRowEmpty } from './document'
+  import { counts, strings } from './strings'
   import type { ScheduleDocument } from './types'
 
   let {
@@ -21,27 +24,34 @@
 
   const sorted = $derived([...documents].sort((a, b) => b.updatedAt - a.updatedAt))
 
-  function formatChanged(timestamp: number): string {
-    return new Date(timestamp).toLocaleString('de-DE', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    })
-  }
-
   let removing = $state<ScheduleDocument | null>(null)
 
   function remove(): void {
     if (removing) ondelete(removing.id)
     removing = null
   }
+
+  /** The trailing draft row is an offer to type, not a line of the schedule. */
+  function shape(entry: ScheduleDocument): string {
+    const last = entry.rows.at(-1)
+    const rows = last && isRowEmpty(last) ? entry.rows.length - 1 : entry.rows.length
+    return counts.documentShape(rows, entry.columns.length)
+  }
 </script>
 
 <section>
-  <h1>{strings.documents}</h1>
-
-  <div class="actions">
-    <button type="button" onclick={oncreate}>{strings.newDocument}</button>
-    <button type="button" onclick={onmanagelists}>{strings.lists}</button>
+  <div class="bar">
+    <h1>{strings.documents}</h1>
+    <div class="actions">
+      <button type="button" class="primary" onclick={oncreate}>
+        <Icon name="add" />
+        {strings.newDocument}
+      </button>
+      <button type="button" onclick={onmanagelists}>
+        <Icon name="lists" />
+        {strings.lists}
+      </button>
+    </div>
   </div>
 
   {#if sorted.length === 0}
@@ -50,16 +60,47 @@
     <ul>
       {#each sorted as entry (entry.id)}
         <li>
-          <button type="button" class="title" onclick={() => onopen(entry.id)}>
-            {entry.title || strings.documentTitlePlaceholder}
+          <!-- Named after the title alone: content naming would fold the date
+               and the shape into the button's name. -->
+          <button
+            type="button"
+            class="open"
+            aria-labelledby="card-title-{entry.id}"
+            onclick={() => onopen(entry.id)}
+          >
+            <span
+              class="title"
+              id="card-title-{entry.id}"
+              class:untitled={entry.title.trim() === ''}
+            >
+              {entry.title || strings.documentTitlePlaceholder}
+            </span>
+            <span class="changed">{formatChanged(entry.updatedAt)}</span>
+            <span class="shape">{shape(entry)}</span>
           </button>
-          <span class="changed">{strings.lastChanged}: {formatChanged(entry.updatedAt)}</span>
-          <button type="button" onclick={() => onduplicate(entry.id)}>
-            {strings.duplicateDocument}
-          </button>
-          <button type="button" onclick={() => (removing = entry)}>
-            {strings.deleteDocument}
-          </button>
+
+          <!-- Outside the card's own button: a button inside a button is not a
+               thing the browser will render. -->
+          <div class="card-actions">
+            <button
+              type="button"
+              class="icon"
+              title={strings.duplicateDocument}
+              aria-label={strings.duplicateDocument}
+              onclick={() => onduplicate(entry.id)}
+            >
+              <Icon name="copy" size={18} />
+            </button>
+            <button
+              type="button"
+              class="icon danger"
+              title={strings.deleteDocument}
+              aria-label={strings.deleteDocument}
+              onclick={() => (removing = entry)}
+            >
+              <Icon name="trash" size={18} />
+            </button>
+          </div>
         </li>
       {/each}
     </ul>
@@ -75,44 +116,138 @@
 />
 
 <style>
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 1rem 0 0;
-  }
-
-  li {
+  .bar {
     display: flex;
     align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #ddd;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
   }
 
-  .title {
-    flex: 1;
-    text-align: left;
-    background: none;
-    border: none;
-    padding: 0;
-    font: inherit;
-    font-weight: 600;
-    color: #24457c;
-    cursor: pointer;
-    text-decoration: underline;
-  }
-
-  .changed {
-    color: #666;
-    font-size: 0.85em;
+  h1 {
+    margin: 0;
   }
 
   .actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
+  }
+
+  .primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .primary:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: var(--space-4);
+  }
+
+  li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    background: #fff;
+    box-shadow: var(--shadow);
+    transition: border-color var(--duration);
+  }
+
+  li:hover {
+    border-color: var(--accent);
+  }
+
+  .open {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    padding: var(--space-4);
+    border: none;
+    border-radius: var(--radius-lg);
+    background: none;
+    text-align: left;
+  }
+
+  .open:hover {
+    background: none;
+  }
+
+  .title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .untitled {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink-faint);
+  }
+
+  .changed,
+  .shape {
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+  }
+
+  .shape {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+  }
+
+  .card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-1);
+    padding: 0 var(--space-2) var(--space-2);
+  }
+
+  /* Present for the keyboard from the first tab stop, quiet until approached. */
+  .icon {
+    padding: var(--space-2);
+    border-color: transparent;
+    background: none;
+    color: var(--ink-faint);
+    transition:
+      color var(--duration),
+      background var(--duration);
+  }
+
+  li:hover .icon,
+  .icon:focus-visible {
+    color: var(--ink);
+  }
+
+  .icon:hover {
+    background: var(--accent-sunk);
+    border-color: transparent;
+    color: var(--accent);
+  }
+
+  .danger:hover {
+    background: var(--red-sunk);
+    color: var(--red);
+  }
+
+  .danger:focus-visible {
+    outline-color: var(--red);
   }
 
   .empty {
-    color: #666;
+    color: var(--ink-faint);
   }
 </style>
