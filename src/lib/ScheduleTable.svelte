@@ -79,19 +79,20 @@
     if ((row.cells[column.id] ?? '') === '') customCells.delete(cellKey(row, column))
   }
 
-  function focusOnMount(node: HTMLInputElement): void {
-    node.focus()
+  function focusIfNew(node: HTMLTextAreaElement, active: boolean): void {
+    if (active) node.focus()
   }
 
   function addRow(): void {
     plan.rows.push(createRow(plan.columns))
   }
 
+  /** Cells are multi-line boxes, so a newline needs Shift; plain Enter keeps
+      adding a row at the end, as it did when they were single-line inputs. */
   function onCellKeydown(event: KeyboardEvent, rowIndex: number): void {
-    if (event.key === 'Enter' && rowIndex === plan.rows.length - 1) {
-      event.preventDefault()
-      addRow()
-    }
+    if (event.key !== 'Enter' || event.shiftKey) return
+    event.preventDefault()
+    if (rowIndex === plan.rows.length - 1) addRow()
   }
 
   // headerSlots always parks the start-time cell next to the duration column,
@@ -336,17 +337,9 @@
               class:group-end={column.type === 'duration'}
               class:print-hidden={column.hideInPrint}
             >
-              {#if column.type === 'longText'}
-                <textarea rows="2" bind:value={row.cells[column.id]}></textarea>
-              {:else if column.type === 'select'}
+              {#if column.type === 'select'}
                 {#if isCustomCell(row, column, row.cells[column.id] ?? '')}
-                  <input
-                    type="text"
-                    use:focusOnMount
-                    bind:value={row.cells[column.id]}
-                    onblur={() => leaveCustom(row, column)}
-                    onkeydown={(event) => onCellKeydown(event, rowIndex)}
-                  />
+                  {@render cellField(row, column, rowIndex, true)}
                 {:else}
                   <select
                     value={row.cells[column.id] ?? ''}
@@ -360,17 +353,7 @@
                   </select>
                 {/if}
               {:else}
-                <input
-                  type="text"
-                  class:cell-invalid={column.type === 'duration' &&
-                    isUnreadableDuration(row.cells[column.id] ?? '')}
-                  title={column.type === 'duration' &&
-                  isUnreadableDuration(row.cells[column.id] ?? '')
-                    ? strings.durationInvalid
-                    : ''}
-                  bind:value={row.cells[column.id]}
-                  onkeydown={(event) => onCellKeydown(event, rowIndex)}
-                />
+                {@render cellField(row, column, rowIndex, false)}
               {/if}
             </td>
           {/if}
@@ -382,6 +365,25 @@
 </table>
 
 <button type="button" class="no-print" onclick={addRow}>{strings.addRow}</button>
+
+<!-- Every editable cell is the same box: it grows with its own text instead of
+     cropping it, and there is nothing to drag open. The wrapper holds a hidden
+     copy of the value, which is what gives the grid cell its height. -->
+{#snippet cellField(row: Row, column: Column, rowIndex: number, isNewCustomValue: boolean)}
+  {@const value = row.cells[column.id] ?? ''}
+  {@const invalid = column.type === 'duration' && isUnreadableDuration(value)}
+  <span class="field" data-value={value}>
+    <textarea
+      rows="1"
+      class:cell-invalid={invalid}
+      title={invalid ? strings.durationInvalid : ''}
+      use:focusIfNew={isNewCustomValue}
+      bind:value={row.cells[column.id]}
+      onblur={() => column.type === 'select' && leaveCustom(row, column)}
+      onkeydown={(event) => onCellKeydown(event, rowIndex)}
+    ></textarea>
+  </span>
+{/snippet}
 
 {#snippet printMark(hidden: boolean)}
   {#if hidden}<span class="print-mark no-print" role="img" aria-label={strings.notPrinted}
@@ -550,8 +552,12 @@
     user-select: none;
   }
 
+  /* Handle, name and print mark stay on one line: the column widens for a long
+     name instead of breaking the header into stacked pieces. Paper gets the
+     normal wrapping back, where there is no handle and no width to spare. */
   th {
     position: relative;
+    white-space: nowrap;
   }
 
   .announcer {
@@ -593,6 +599,7 @@
     box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
     font-weight: normal;
     text-align: left;
+    white-space: normal;
   }
 
   /* The rightmost column sits at the table's edge, so its panel opens inwards. */
@@ -650,6 +657,39 @@
     background: transparent;
     font: inherit;
     color: inherit;
+  }
+
+  /* A percentage-wide select contributes no width to the auto table layout, so
+     its longest value ends up clipped. Sizing it to its content widens the
+     column instead, which is the whole point of the dropdown. */
+  td select {
+    width: auto;
+  }
+
+  /* Auto-growing cell: the hidden ::after copy of the value sets the height,
+     the textarea sits on top of it in the same grid cell. */
+  .field {
+    display: grid;
+    min-width: 0;
+  }
+
+  .field::after {
+    content: attr(data-value) ' ';
+    visibility: hidden;
+  }
+
+  .field > textarea,
+  .field::after {
+    grid-area: 1 / 1;
+    min-width: 0;
+    font: inherit;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .field > textarea {
+    resize: none;
+    overflow: hidden;
   }
 
   input:focus,

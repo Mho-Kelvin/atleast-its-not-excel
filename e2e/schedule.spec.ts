@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 
 function durationInput(rowNumber: number): string {
-  return `tbody tr:nth-child(${rowNumber}) td[data-column-type="duration"] input`
+  return `tbody tr:nth-child(${rowNumber}) td[data-column-type="duration"] textarea`
 }
 
 /** The first text column of a row; the default document has more than one. */
 function textInput(page: Page, rowNumber: number) {
-  return page.locator(`tbody tr:nth-child(${rowNumber}) td[data-column-type="text"] input`).first()
+  return page.locator(`tbody tr:nth-child(${rowNumber}) td[data-column-type="text"] textarea`).first()
 }
 
 async function openNewDocument(page: Page): Promise<void> {
@@ -33,7 +33,7 @@ test('an unreadable duration stops the clock instead of guessing', async ({ page
   await page.getByRole('button', { name: 'Zeile hinzufügen' }).click()
 
   await expect(page.locator('tbody .time-column')).toHaveText(['09:00', ''])
-  await expect(page.locator('input.cell-invalid')).toHaveCount(1)
+  await expect(page.locator('textarea.cell-invalid')).toHaveCount(1)
 })
 
 test('print media hides the app chrome and keeps the table', async ({ page }) => {
@@ -138,8 +138,8 @@ test('a dropdown column offers the values of its list', async ({ page }) => {
   await expect(cell.locator('select')).toHaveValue('Saal')
 
   await cell.locator('select').selectOption('__custom__')
-  await cell.locator('input').fill('Küche')
-  await expect(cell.locator('input')).toHaveValue('Küche')
+  await cell.locator('textarea').fill('Küche')
+  await expect(cell.locator('textarea')).toHaveValue('Küche')
 })
 
 test('columns can be dragged into a new order', async ({ page }) => {
@@ -239,4 +239,63 @@ test('rows can be dragged into a new order', async ({ page }) => {
 
   await expect(textInput(page, 1)).toHaveValue('Zweite')
   await expect(textInput(page, 2)).toHaveValue('Erste')
+})
+
+test('a cell grows with its text instead of cropping it', async ({ page }) => {
+  await openNewDocument(page)
+
+  const cell = textInput(page, 1)
+  const oneLine = (await cell.boundingBox())!.height
+
+  await cell.fill('Ein ziemlich langer Text, der in dieser Spalte über mehrere Zeilen laufen muss')
+
+  const grown = (await cell.boundingBox())!.height
+  expect(grown).toBeGreaterThan(oneLine)
+  await expect(cell).toHaveJSProperty('scrollHeight', Math.round(grown))
+})
+
+test('a dropdown shows its longest value in full', async ({ page }) => {
+  // Narrow on purpose: with room to spare every layout looks fine, the crop
+  // only shows up once the columns compete for the width.
+  await page.setViewportSize({ width: 600, height: 800 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Auswahllisten' }).click()
+  await page.getByLabel('Name der Liste').fill('Räume')
+  await page.getByRole('button', { name: 'Neue Liste' }).click()
+  await page.getByLabel('Wert hinzufügen: Räume').fill('Honigkuchenpferd im großen Saal')
+  await page.getByRole('button', { name: 'Wert hinzufügen' }).click()
+  await page.getByRole('button', { name: 'Zurück' }).click()
+
+  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await page.getByTitle('Spalte hinzufügen').click()
+  await page.getByLabel('Spaltenname').fill('Ort')
+  await page.getByLabel('Typ').selectOption('select')
+  await page.getByLabel('Liste').selectOption({ label: 'Räume' })
+
+  const dropdown = page.locator('tbody tr:nth-child(1) td[data-column-type="select"] select')
+  await dropdown.selectOption('Honigkuchenpferd im großen Saal')
+
+  // A select crops its text without ever reporting an overflow, so the box is
+  // measured against the text it is meant to show.
+  const { box, text } = await dropdown.evaluate((node: HTMLSelectElement) => {
+    const style = getComputedStyle(node)
+    const pen = document.createElement('canvas').getContext('2d')!
+    pen.font = `${style.fontSize} ${style.fontFamily}`
+    return { box: node.clientWidth, text: pen.measureText(node.value).width }
+  })
+  expect(box).toBeGreaterThan(text)
+})
+
+test('a header keeps its handle, name and mark on one line', async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 800 })
+  await openNewDocument(page)
+
+  const header = page.locator('thead th', { hasText: 'Programmpunkt' })
+  const handle = header.locator('.drag-handle')
+  const name = header.locator('.column-name')
+
+  const handleBox = (await handle.boundingBox())!
+  const nameBox = (await name.boundingBox())!
+  expect(Math.abs(handleBox.y - nameBox.y)).toBeLessThan(handleBox.height)
+  expect(nameBox.height).toBeLessThan(handleBox.height * 2)
 })

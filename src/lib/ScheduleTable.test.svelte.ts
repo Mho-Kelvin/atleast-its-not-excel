@@ -48,8 +48,8 @@ function selectCell(): HTMLSelectElement {
   return selectCells()[0]
 }
 
-function textCell(): HTMLInputElement {
-  return document.querySelector('td[data-column-type="select"] input') as HTMLInputElement
+function textCell(): HTMLTextAreaElement {
+  return document.querySelector('td[data-column-type="select"] textarea') as HTMLTextAreaElement
 }
 
 describe('column headers', () => {
@@ -320,5 +320,38 @@ describe('print visibility', () => {
     expect(screen.getByLabelText('Spalte drucken')).toBeTruthy()
     expect(screen.queryByLabelText('Uhrzeit drucken')).toBeNull()
     expect(screen.queryByLabelText('Dauer drucken')).toBeNull()
+  })
+})
+
+describe('cell fields', () => {
+  function fields(): HTMLTextAreaElement[] {
+    return [...document.querySelectorAll('tbody textarea')] as HTMLTextAreaElement[]
+  }
+
+  it('edits every cell in the same growing box', async () => {
+    const plan = renderTable()
+    const editable = plan.columns.filter((column) => column.type !== 'select')
+
+    expect(fields()).toHaveLength(plan.rows.length * editable.length)
+    expect(document.querySelector('tbody input')).toBeNull()
+  })
+
+  it('mirrors the value into the wrapper that gives the box its height', async () => {
+    renderTable()
+
+    await fireEvent.input(fields()[0], { target: { value: 'Zwei\nZeilen' } })
+
+    expect(fields()[0].closest('.field')?.getAttribute('data-value')).toBe('Zwei\nZeilen')
+  })
+
+  it('adds a row on Enter in the last row and leaves Shift+Enter to the text', async () => {
+    const plan = renderTable()
+    const rows = plan.rows.length
+
+    await fireEvent.keyDown(fields().at(-1)!, { key: 'Enter', shiftKey: true })
+    expect(plan.rows).toHaveLength(rows)
+
+    await fireEvent.keyDown(fields().at(-1)!, { key: 'Enter' })
+    expect(plan.rows).toHaveLength(rows + 1)
   })
 })

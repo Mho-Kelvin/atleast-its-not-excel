@@ -39,9 +39,9 @@ describe('ScheduleTable', () => {
     const plan = planWithDurations('15', 'tbd')
     const { container } = render(ScheduleTable, { props: { plan, lists: [] } })
 
-    const flagged = container.querySelectorAll('input.cell-invalid')
+    const flagged = container.querySelectorAll('textarea.cell-invalid')
     expect(flagged).toHaveLength(1)
-    expect((flagged[0] as HTMLInputElement).value).toBe('tbd')
+    expect((flagged[0] as HTMLTextAreaElement).value).toBe('tbd')
   })
 
   it('renders no start-time column when the document has no duration column', () => {
