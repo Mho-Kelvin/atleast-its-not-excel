@@ -37,6 +37,21 @@ describe('loadStore', () => {
     expect(localStorage.getItem(BROKEN_KEY)).not.toBeNull()
   })
 
+  it('gives a store written before the start times an empty list', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [], lists: [] }))
+
+    expect(loadStore().startTimes).toEqual([])
+  })
+
+  it('reads start times written as bare strings', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ documents: [], lists: [], startTimes: ['08:30'] }),
+    )
+
+    expect(loadStore().startTimes).toEqual([{ time: '08:30' }])
+  })
+
   it('rejects a document that is missing fields', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [{ id: 'a' }], lists: [] }))
 

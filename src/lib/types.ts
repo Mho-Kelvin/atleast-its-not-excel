@@ -22,6 +22,12 @@ export interface SelectList {
   values: string[]
 }
 
+export interface StartTime {
+  time: string
+  /** Optional label, shown in front of the time. */
+  name?: string
+}
+
 export interface HeaderField {
   id: string
   label: string
@@ -45,4 +51,6 @@ export interface ScheduleDocument {
 export interface Store {
   documents: ScheduleDocument[]
   lists: SelectList[]
+  /** The times the start-time field offers. Fixed: it is never attached to a column, never deleted. */
+  startTimes: StartTime[]
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createList, removeList } from './lists'
+  import { formatStartTime } from './schedule'
   import { strings } from './strings'
   import type { SelectList, Store } from './types'
 
@@ -7,6 +8,8 @@
 
   let newListName = $state('')
   let newValues = $state<Record<string, string>>({})
+  let newStartTime = $state('')
+  let newStartTimeName = $state('')
 
   function add(): void {
     const name = newListName.trim()
@@ -20,6 +23,17 @@
     if (value === '' || list.values.includes(value)) return
     list.values.push(value)
     newValues[list.id] = ''
+  }
+
+  /** The time input hands over "09:00" or nothing at all, so there is no text to check. */
+  function addStartTime(): void {
+    if (newStartTime === '' || store.startTimes.some((entry) => entry.time === newStartTime)) return
+    const name = newStartTimeName.trim()
+    store.startTimes = [...store.startTimes, { time: newStartTime, name: name || undefined }].sort(
+      (a, b) => a.time.localeCompare(b.time),
+    )
+    newStartTime = ''
+    newStartTimeName = ''
   }
 
   function confirmRemove(list: SelectList): void {
@@ -40,6 +54,46 @@
     />
     <button type="button" onclick={add}>{strings.newList}</button>
   </div>
+
+  <!-- The start times are one fixed list: nothing attaches to it, nothing deletes
+       it, and a time input is what keeps unusable values out of it. -->
+  <article>
+    <header>
+      <h2>{strings.startTimeList}</h2>
+    </header>
+
+    <ul>
+      {#each store.startTimes as entry, index (entry.time)}
+        <li>
+          <span>{formatStartTime(entry)}</span>
+          <button type="button" onclick={() => store.startTimes.splice(index, 1)}>
+            {strings.removeValue}
+          </button>
+        </li>
+      {/each}
+    </ul>
+
+    <div class="add">
+      <input
+        type="text"
+        aria-label={strings.startTimeNameLabel}
+        placeholder={strings.startTimeNameLabel}
+        bind:value={newStartTimeName}
+      />
+      <input
+        type="time"
+        aria-label={`${strings.addValue}: ${strings.startTimeList}`}
+        bind:value={newStartTime}
+        onkeydown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            addStartTime()
+          }
+        }}
+      />
+      <button type="button" onclick={addStartTime}>{strings.addValue}</button>
+    </div>
+  </article>
 
   {#if store.lists.length === 0}
     <p class="empty">{strings.noLists}</p>
@@ -97,6 +151,11 @@
   header input {
     flex: 1;
     font-weight: 600;
+  }
+
+  h2 {
+    font-size: 1em;
+    margin: 0;
   }
 
   ul {

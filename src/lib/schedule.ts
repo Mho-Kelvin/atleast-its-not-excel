@@ -1,3 +1,5 @@
+import type { StartTime } from './types'
+
 const TIME_OF_DAY = /^(\d{1,2}):([0-5]\d)$/
 const MINUTES_PER_DAY = 24 * 60
 
@@ -15,6 +17,11 @@ export function formatTimeOfDay(minutes: number): string {
   const wrapped = ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY
   const hours = Math.floor(wrapped / 60)
   return `${String(hours).padStart(2, '0')}:${String(wrapped % 60).padStart(2, '0')}`
+}
+
+/** A named start time reads as "Empfang (09:00)", an unnamed one as the bare time. */
+export function formatStartTime(entry: StartTime): string {
+  return entry.name ? `${entry.name} (${entry.time})` : entry.time
 }
 
 /**

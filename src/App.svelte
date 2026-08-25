@@ -5,7 +5,8 @@
   import ScheduleTable from './lib/ScheduleTable.svelte'
   import { createDocument, duplicateDocument } from './lib/document'
   import { clear, createHistory, record, redo, undo } from './lib/history'
-  import { parseTimeOfDay } from './lib/schedule'
+  import { CUSTOM_VALUE } from './lib/lists'
+  import { formatStartTime, parseTimeOfDay } from './lib/schedule'
   import { loadStore, saveStore } from './lib/storage'
   import { strings } from './lib/strings'
   import type { ScheduleDocument } from './lib/types'
@@ -27,6 +28,32 @@
   const startTimeIsValid = $derived(
     currentIndex < 0 || parseTimeOfDay(store.documents[currentIndex].startTime) !== null,
   )
+
+  /** Set while the user typed a time of their own, the same escape a dropdown cell has. */
+  let customStartTime = $state(false)
+  const startTimeIsCustom = $derived.by(() => {
+    const startTime = store.documents[currentIndex]?.startTime ?? ''
+    const onList = store.startTimes.some((entry) => entry.time === startTime)
+    return customStartTime || (startTime !== '' && !onList)
+  })
+
+  function chooseStartTime(chosen: string): void {
+    if (chosen === CUSTOM_VALUE) {
+      customStartTime = true
+      store.documents[currentIndex].startTime = ''
+      return
+    }
+    store.documents[currentIndex].startTime = chosen
+  }
+
+  /** An emptied box hands the dropdown back, as it does in a dropdown cell. */
+  function leaveCustomStartTime(): void {
+    if (store.documents[currentIndex].startTime === '') customStartTime = false
+  }
+
+  function focusIfCustom(node: HTMLInputElement): void {
+    if (customStartTime) node.focus()
+  }
 
   /** The change key deliberately leaves out updatedAt, which we set ourselves. */
   function changeKey(document: ScheduleDocument): string {
@@ -65,6 +92,7 @@
 
   function open(id: string): void {
     currentId = id
+    customStartTime = false
     forgetHistory()
     view = 'editor'
   }
@@ -159,10 +187,34 @@
         {store.documents[currentIndex].title || strings.documentTitlePlaceholder}
       </h1>
 
-      <label>
-        {strings.startTimeLabel}
-        <input type="text" size="5" bind:value={store.documents[currentIndex].startTime} />
-      </label>
+      <!-- Explicit for/id, not a wrapping <label>: a wrapped select pulls its
+           own option text into its accessible name. -->
+      <span>
+        <label for="start-time">{strings.startTimeLabel}</label>
+        {#if store.startTimes.length > 0 && !startTimeIsCustom}
+          <select
+            id="start-time"
+            value={store.documents[currentIndex].startTime}
+            onchange={(event) => chooseStartTime(event.currentTarget.value)}
+          >
+            <option value=""></option>
+            {#each store.startTimes as entry (entry.time)}
+              <option value={entry.time}>{formatStartTime(entry)}</option>
+            {/each}
+            <option value={CUSTOM_VALUE}>{strings.customValue}</option>
+          </select>
+        {:else}
+          <!-- Same time input the start-time list is edited with: a time nobody
+               can parse never gets into the document in the first place. -->
+          <input
+            id="start-time"
+            type="time"
+            use:focusIfCustom
+            bind:value={store.documents[currentIndex].startTime}
+            onblur={leaveCustomStartTime}
+          />
+        {/if}
+      </span>
       {#if !startTimeIsValid}
         <span class="no-print warning">{strings.startTimeInvalid}</span>
       {/if}
@@ -205,6 +257,10 @@
 
   .print-only {
     display: none;
+  }
+
+  header span > label {
+    margin-right: 0.3rem;
   }
 
   .warning {

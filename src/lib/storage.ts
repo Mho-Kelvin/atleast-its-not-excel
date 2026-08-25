@@ -1,10 +1,10 @@
-import type { ScheduleDocument, SelectList, Store } from './types'
+import type { ScheduleDocument, SelectList, StartTime, Store } from './types'
 
 const STORAGE_KEY = 'tobias-tool/v1'
 const BROKEN_KEY = 'tobias-tool/v1-broken'
 
 export function emptyStore(): Store {
-  return { documents: [], lists: [] }
+  return { documents: [], lists: [], startTimes: [] }
 }
 
 /**
@@ -28,7 +28,13 @@ export function loadStore(): Store {
     localStorage.setItem(BROKEN_KEY, raw)
     return emptyStore()
   }
+  parsed.startTimes = (parsed.startTimes ?? []).map(toStartTime)
   return parsed
+}
+
+/** Older stores carry no start times at all, or carry them as bare time strings. */
+function toStartTime(entry: unknown): StartTime {
+  return typeof entry === 'string' ? { time: entry } : (entry as StartTime)
 }
 
 /** Returns false when the browser refused the write, e.g. the quota is full. */

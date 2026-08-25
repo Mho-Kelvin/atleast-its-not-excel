@@ -4,6 +4,9 @@ export function createList(name: string): SelectList {
   return { id: crypto.randomUUID(), name, values: [] }
 }
 
+/** Never a list value: the dropdown entry that turns the cell into a text box. */
+export const CUSTOM_VALUE = '__custom__'
+
 /**
  * Deleting a list also clears it off every column that pointed at it, in every
  * document. A column left holding a dead list id would show an empty dropdown

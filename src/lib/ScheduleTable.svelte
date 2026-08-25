@@ -17,7 +17,7 @@
     type HeaderSlot,
   } from './document'
   import { parseDuration } from './duration'
-  import { listValues } from './lists'
+  import { CUSTOM_VALUE, listValues } from './lists'
   import { computeStartTimes, formatTimeOfDay, parseTimeOfDay } from './schedule'
   import { dragAnnouncements, strings } from './strings'
   import type { Column, ColumnType, Row, ScheduleDocument, SelectList } from './types'
@@ -33,9 +33,6 @@
   } = $props()
 
   const TYPES: ColumnType[] = ['text', 'longText', 'select', 'duration']
-
-  /** Never a list value: the dropdown entry that turns the cell into a text box. */
-  const CUSTOM_VALUE = '__custom__'
 
   const durationColumn = $derived(findDurationColumn(plan.columns))
   const timeTitle = $derived(plan.timeTitle ?? strings.startTimeColumn)

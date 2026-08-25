@@ -46,6 +46,8 @@ export const strings = {
   confirmDeleteColumn: 'Diese Spalte mit allen Inhalten löschen?',
 
   lists: 'Auswahllisten',
+  startTimeList: 'Startzeiten',
+  startTimeNameLabel: 'Bezeichnung (optional)',
   newList: 'Neue Liste',
   listNameLabel: 'Name der Liste',
   addValue: 'Wert hinzufügen',
