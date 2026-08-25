@@ -9,7 +9,25 @@
 }
 
 @media print {
+  /* Paper takes the same components with a different palette: black on white
+     for a school copier, no ruling, no tints. Redefining the tokens beats
+     writing a print rule per component. */
   :root {
+    --paper: #fff;
+    --paper-sunk: #fff;
+    --grid-line: transparent;
+    --rule: #000;
+    --rule-strong: #000;
+    --ink: #000;
+    --ink-muted: #000;
+    --ink-faint: #000;
+    --accent: #000;
+    --accent-sunk: transparent;
+    --red: #000;
+    --red-sunk: transparent;
+    --shadow: none;
+    --shadow-lifted: none;
+
     font-size: 10pt;
   }
 
@@ -79,6 +97,21 @@
      block above the table deliberately stays on page one. */
   thead {
     display: table-header-group;
+  }
+
+  /* One heavier rule under the headings, so the table reads as a table before
+     it is read as rows. */
+  thead th {
+    border-bottom: 1pt solid #000;
+    font-weight: 600;
+  }
+
+  /* Times and durations keep their own face on paper: the digits line up down
+     the column, which is the whole point of a schedule. */
+  .time-column,
+  td[data-column-type='duration'] {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
   }
 
   tr {
