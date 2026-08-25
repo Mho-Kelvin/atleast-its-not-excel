@@ -16,6 +16,7 @@ export const strings = {
   back: 'Zurück',
   cancel: 'Abbrechen',
   close: 'Schließen',
+  saved: 'Gespeichert',
 
   documents: 'Dokumente',
   newDocument: 'Neues Dokument',

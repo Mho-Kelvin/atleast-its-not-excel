@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte'
   import { isHeaderFieldEmpty } from './document'
   import { strings } from './strings'
   import type { ScheduleDocument } from './types'
@@ -28,11 +29,12 @@
       {#if !draft}
         <button
           type="button"
-          class="no-print"
+          class="icon no-print"
           title={strings.removeHeaderField}
+          aria-label={strings.removeHeaderField}
           onclick={() => plan.headerFields.splice(index, 1)}
         >
-          ✕
+          <Icon name="close" size={16} />
         </button>
       {/if}
     </div>
@@ -40,20 +42,58 @@
 </section>
 
 <style>
+  /* Reads as filled-in stationery: the label column keeps its width down the
+     block, so the values line up whatever the labels say. */
   .field {
-    display: flex;
+    display: grid;
+    grid-template-columns: 9rem 1fr auto;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--space-2);
     padding: 0.1rem 0;
   }
 
-  .label {
-    width: 12ch;
-    font-weight: 600;
+  .label,
+  .value {
+    border-color: transparent;
+    background: none;
   }
 
-  .value {
-    flex: 1;
+  .label {
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .label::placeholder,
+  .value::placeholder {
+    color: var(--ink-faint);
+  }
+
+  .label:hover,
+  .value:hover {
+    border-color: var(--rule);
+    background: #fff;
+  }
+
+  .label:focus,
+  .value:focus {
+    background: #fff;
+  }
+
+  .icon {
+    padding: var(--space-1);
+    border-color: transparent;
+    background: none;
+    color: var(--ink-faint);
+  }
+
+  .icon:hover {
+    background: var(--red-sunk);
+    border-color: transparent;
+    color: var(--red);
+  }
+
+  .icon:focus-visible {
+    outline-color: var(--red);
   }
 
   @media print {
@@ -61,14 +101,15 @@
       display: none;
     }
 
+    .field {
+      grid-template-columns: auto 1fr;
+      gap: 0 3mm;
+      padding: 0;
+    }
+
     .label,
     .value {
       width: auto;
-      flex: none;
-    }
-
-    .value {
-      margin-left: 0.5rem;
     }
   }
 </style>
