@@ -86,8 +86,15 @@
 />
 
 <style>
+  /* The sheet stays 60rem while the table fits in it, then grows with the
+     table's own minimum up to 90rem, after which the table scrolls in its box
+     again. The floor and the cap both yield to the window, so a narrow screen
+     never scrolls the page sideways. */
   main {
-    max-width: 60rem;
+    box-sizing: border-box;
+    width: min-content;
+    min-width: min(60rem, 100%);
+    max-width: min(90rem, 100%);
     margin: 0 auto;
     padding: 1rem;
   }
@@ -98,6 +105,8 @@
 
   @media print {
     main {
+      width: auto;
+      min-width: 0;
       max-width: none;
       padding: 0;
     }

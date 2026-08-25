@@ -115,8 +115,12 @@
 </tr>
 
 <style>
+  /* The floor a user column never goes below, and what the sheet grows its own
+     width from, so cells widen instead of squeezing to a character each. The
+     fixed cells below carry their own width and take it back. */
   td {
     border: 1px solid var(--rule);
+    min-width: 12ch;
     background: #fff;
     padding: 0.3rem 0.4rem;
     text-align: left;
@@ -133,6 +137,13 @@
   td:hover,
   td:focus-within {
     background: #fff;
+  }
+
+  .time-column,
+  .group-end,
+  .handle-column,
+  .trailing {
+    min-width: 0;
   }
 
   .time-column {
@@ -229,6 +240,11 @@
     /* The draft row is an offer to type, not a line of the schedule. */
     .draft {
       display: none;
+    }
+
+    /* A4 is narrower than the screen's floor, so paper sizes its own columns. */
+    td {
+      min-width: 0;
     }
   }
 </style>

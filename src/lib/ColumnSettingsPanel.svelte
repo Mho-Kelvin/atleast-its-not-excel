@@ -234,7 +234,14 @@
     color: var(--accent);
   }
 
+  /* The header cell is nowrap, so a name is what sets its column's minimum. The
+     cap stops one long name pushing the whole sheet wider; past it the name
+     wraps instead. */
   .column-name {
+    display: inline-block;
+    max-width: 20ch;
+    white-space: normal;
+    overflow-wrap: break-word;
     border: none;
     background: none;
     padding: 0;

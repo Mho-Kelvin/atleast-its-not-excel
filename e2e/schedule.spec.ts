@@ -11,6 +11,12 @@ function textInput(page: Page, rowNumber: number) {
     .first()
 }
 
+async function addColumn(page: Page, name: string): Promise<void> {
+  await page.getByTitle('Spalte hinzufügen').click()
+  await page.getByLabel('Spaltenname').fill(name)
+  await page.keyboard.press('Escape')
+}
+
 async function openNewDocument(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: 'Neues Dokument' }).click()
@@ -384,6 +390,58 @@ test('a column can be moved with the keyboard alone', async ({ page }) => {
   await expect(headings).toHaveText(['Uhrzeit', 'Verantwortlich', 'Programmpunkt'])
 })
 
+test('the sheet holds its width while the table fits, then grows to a limit', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await openNewDocument(page)
+
+  const sheetWidth = async () => (await page.locator('main').boundingBox())!.width
+  const overflows = () =>
+    page.locator('.scroller').evaluate((node) => node.scrollWidth > node.clientWidth + 1)
+
+  expect(await sheetWidth()).toBe(960)
+  await addColumn(page, 'Raum')
+  expect(await sheetWidth()).toBe(960)
+  expect(await overflows()).toBe(false)
+
+  const widths: number[] = []
+  for (let index = 1; index <= 12; index++) {
+    await addColumn(page, `Spalte ${index}`)
+    widths.push(await sheetWidth())
+  }
+
+  // Wider than the 60rem it started at, never wider than the 90rem cap, and
+  // never narrower than it already was.
+  expect(widths.some((width) => width > 960 && width < 1440)).toBe(true)
+  expect(Math.max(...widths)).toBe(1440)
+  expect(widths.every((width, index) => index === 0 || width >= widths[index - 1])).toBe(true)
+
+  // Past the cap the table is back to scrolling inside its own box.
+  expect(await overflows()).toBe(true)
+})
+
+test('a long column name wraps instead of widening the sheet further', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await openNewDocument(page)
+
+  const name = page.locator('thead .column-name').nth(1)
+  const oneLine = (await name.boundingBox())!.height
+  await name.click()
+  await page.getByLabel('Spaltenname').fill('Unterrichtsvorbereitungsphase')
+  await page.keyboard.press('Escape')
+  await expect(name).toHaveText('Unterrichtsvorbereitungsphase')
+
+  const { box, text } = await name.evaluate((node: HTMLElement) => {
+    const style = getComputedStyle(node)
+    const pen = document.createElement('canvas').getContext('2d')!
+    pen.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+    return { box: node.clientWidth, text: pen.measureText(node.textContent!).width }
+  })
+
+  expect(box).toBeLessThan(text)
+  expect((await name.boundingBox())!.height).toBeGreaterThan(oneLine)
+  expect((await page.locator('main').boundingBox())!.width).toBe(960)
+})
+
 test('a table wider than its box says so at the edge it continues past', async ({ page }) => {
   await page.setViewportSize({ width: 720, height: 700 })
   await openNewDocument(page)
@@ -392,9 +450,7 @@ test('a table wider than its box says so at the edge it continues past', async (
   await expect(frame).not.toHaveClass(/more-right/)
 
   for (const name of ['Raum', 'Technik', 'Material', 'Bemerkung']) {
-    await page.getByTitle('Spalte hinzufügen').click()
-    await page.getByLabel('Spaltenname').fill(name)
-    await page.keyboard.press('Escape')
+    await addColumn(page, name)
   }
 
   await frame.locator('.scroller').evaluate((node) => node.scrollTo({ left: 0 }))
