@@ -14,6 +14,8 @@ export const strings = {
   undo: 'Rückgängig',
   redo: 'Wiederholen',
   back: 'Zurück',
+  cancel: 'Abbrechen',
+  close: 'Schließen',
 
   documents: 'Dokumente',
   newDocument: 'Neues Dokument',

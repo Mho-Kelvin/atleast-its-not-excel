@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ConfirmDialog from './ConfirmDialog.svelte'
   import { strings } from './strings'
   import type { ScheduleDocument } from './types'
 
@@ -27,8 +28,11 @@
     })
   }
 
-  function confirmDelete(entry: ScheduleDocument): void {
-    if (window.confirm(strings.confirmDeleteDocument)) ondelete(entry.id)
+  let removing = $state<ScheduleDocument | null>(null)
+
+  function remove(): void {
+    if (removing) ondelete(removing.id)
+    removing = null
   }
 </script>
 
@@ -53,7 +57,7 @@
           <button type="button" onclick={() => onduplicate(entry.id)}>
             {strings.duplicateDocument}
           </button>
-          <button type="button" onclick={() => confirmDelete(entry)}>
+          <button type="button" onclick={() => (removing = entry)}>
             {strings.deleteDocument}
           </button>
         </li>
@@ -61,6 +65,14 @@
     </ul>
   {/if}
 </section>
+
+<ConfirmDialog
+  open={removing !== null}
+  message={strings.confirmDeleteDocument}
+  confirmLabel={strings.deleteDocument}
+  onconfirm={remove}
+  oncancel={() => (removing = null)}
+/>
 
 <style>
   ul {

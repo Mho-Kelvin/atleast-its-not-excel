@@ -1,5 +1,7 @@
 <script lang="ts">
   import { dragHandle } from 'svelte-dnd-action'
+  import ConfirmDialog from './ConfirmDialog.svelte'
+  import Icon from './Icon.svelte'
   import PrintMark from './PrintMark.svelte'
   import { findDurationColumn, removeColumn } from './document'
   import { strings } from './strings'
@@ -44,8 +46,10 @@
     if (type !== 'select') column.listId = undefined
   }
 
-  function confirmRemove(): void {
-    if (!window.confirm(strings.confirmDeleteColumn)) return
+  let removing = $state(false)
+
+  function remove(): void {
+    removing = false
     onclosed()
     removeColumn(plan, column.id)
   }
@@ -163,10 +167,23 @@
         </label>
       {/if}
 
-      <button type="button" onclick={confirmRemove}>{strings.removeColumn}</button>
+      <button type="button" class="remove" onclick={() => (removing = true)}>
+        <Icon name="trash" size={16} />
+        {strings.removeColumn}
+      </button>
     </span>
   {/if}
 </span>
+
+<!-- Outside the panel on purpose: the panel closes on an outside click, and the
+     confirmation has to outlive it. -->
+<ConfirmDialog
+  open={removing}
+  message={strings.confirmDeleteColumn}
+  confirmLabel={strings.removeColumn}
+  onconfirm={remove}
+  oncancel={() => (removing = false)}
+/>
 
 <style>
   .drag-handle {

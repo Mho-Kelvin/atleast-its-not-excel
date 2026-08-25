@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte'
+import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ListManager from './ListManager.svelte'
 import { createColumn, createDocument } from './document'
@@ -92,14 +92,15 @@ describe('ListManager', () => {
     plan.columns.push(column)
     initial.documents.push(plan)
 
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const { store } = renderManager(initial)
 
     await fireEvent.click(screen.getByRole('button', { name: 'Liste löschen' }))
+    const dialog = within(screen.getByRole('dialog'))
+    await fireEvent.click(dialog.getByRole('button', { name: 'Abbrechen' }))
     expect(store.lists).toHaveLength(1)
 
-    confirm.mockReturnValue(true)
     await fireEvent.click(screen.getByRole('button', { name: 'Liste löschen' }))
+    await fireEvent.click(dialog.getByRole('button', { name: 'Liste löschen' }))
     expect(store.lists).toHaveLength(0)
 
     const freed = store.documents[0].columns.find((entry) => entry.title === 'Ort')!

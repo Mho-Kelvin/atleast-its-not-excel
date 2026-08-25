@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [svelte(), svelteTesting()],
   test: {
     environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
     // Tests that need reactive fixtures live in .test.svelte.ts so they can use $state.
     include: ['src/**/*.test.ts', 'src/**/*.test.svelte.ts'],
   },

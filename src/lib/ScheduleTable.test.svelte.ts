@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte'
+import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ScheduleTable from './ScheduleTable.svelte'
 import { createDocument, createRow, findDurationColumn } from './document'
@@ -25,6 +25,16 @@ async function openSettings(name: string): Promise<void> {
     .find((it) => it.textContent?.trim() === name)
   if (!button) throw new Error(`no column header named ${name}`)
   await fireEvent.click(button)
+}
+
+/** Opens the panel, asks for the deletion and answers the confirmation. */
+async function deleteColumn(name: string, confirmed: boolean): Promise<void> {
+  await openSettings(name)
+  await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+
+  const dialog = within(screen.getByRole('dialog'))
+  const answer = confirmed ? 'Spalte löschen' : 'Abbrechen'
+  await fireEvent.click(dialog.getByRole('button', { name: answer }))
 }
 
 async function dropdownColumn(values: string[]) {
@@ -95,11 +105,9 @@ describe('column headers', () => {
   })
 
   it('lets a column become a duration column once the first one is gone', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const plan = renderTable()
 
-    await openSettings('Uhrzeit')
-    await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+    await deleteColumn('Uhrzeit', true)
     await openSettings('Programmpunkt')
     await fireEvent.change(screen.getByLabelText('Typ'), { target: { value: 'duration' } })
 
@@ -156,23 +164,19 @@ describe('column headers', () => {
   })
 
   it('deletes a column with its cells once confirmed', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const plan = renderTable()
     const doomed = plan.columns.find((column) => column.title === 'Verantwortlich')!
 
-    await openSettings('Verantwortlich')
-    await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+    await deleteColumn('Verantwortlich', true)
 
     expect(headerNames()).toEqual(['Uhrzeit', 'Programmpunkt'])
     expect(plan.rows.every((row) => !(doomed.id in row.cells))).toBe(true)
   })
 
   it('keeps the column when the confirmation is declined', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
     const plan = renderTable()
 
-    await openSettings('Verantwortlich')
-    await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+    await deleteColumn('Verantwortlich', false)
 
     expect(plan.columns).toHaveLength(3)
   })
@@ -234,11 +238,9 @@ describe('the time group', () => {
   })
 
   it('deletes the pair together', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const plan = renderTable()
 
-    await openSettings('Uhrzeit')
-    await fireEvent.click(screen.getByRole('button', { name: 'Spalte löschen' }))
+    await deleteColumn('Uhrzeit', true)
 
     expect(findDurationColumn(plan.columns)).toBeUndefined()
     expect(document.querySelector('.time-column')).toBeNull()

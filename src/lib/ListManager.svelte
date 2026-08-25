@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ConfirmDialog from './ConfirmDialog.svelte'
   import { createList, removeList } from './lists'
   import { formatStartTime } from './schedule'
   import { strings } from './strings'
@@ -36,8 +37,11 @@
     newStartTimeName = ''
   }
 
-  function confirmRemove(list: SelectList): void {
-    if (window.confirm(strings.confirmDeleteList)) removeList(store, list.id)
+  let removing = $state<SelectList | null>(null)
+
+  function remove(): void {
+    if (removing) removeList(store, removing.id)
+    removing = null
   }
 </script>
 
@@ -101,7 +105,7 @@
     <article>
       <header>
         <input type="text" aria-label={strings.listNameLabel} bind:value={list.name} />
-        <button type="button" onclick={() => confirmRemove(list)}>{strings.deleteList}</button>
+        <button type="button" onclick={() => (removing = list)}>{strings.deleteList}</button>
       </header>
 
       <ul>
@@ -132,6 +136,14 @@
     </article>
   {/each}
 </section>
+
+<ConfirmDialog
+  open={removing !== null}
+  message={strings.confirmDeleteList}
+  confirmLabel={strings.deleteList}
+  onconfirm={remove}
+  oncancel={() => (removing = null)}
+/>
 
 <style>
   article {

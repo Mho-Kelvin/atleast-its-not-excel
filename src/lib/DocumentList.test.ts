@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte'
+import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import DocumentList from './DocumentList.svelte'
 import { createDocument } from './document'
@@ -48,13 +48,14 @@ describe('DocumentList', () => {
 
   it('deletes only after the confirmation is accepted', async () => {
     const handlers = renderList()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
 
     await fireEvent.click(screen.getByRole('button', { name: 'Löschen' }))
+    const dialog = within(screen.getByRole('dialog'))
+    await fireEvent.click(dialog.getByRole('button', { name: 'Abbrechen' }))
     expect(handlers.ondelete).not.toHaveBeenCalled()
 
-    confirm.mockReturnValue(true)
     await fireEvent.click(screen.getByRole('button', { name: 'Löschen' }))
+    await fireEvent.click(dialog.getByRole('button', { name: 'Löschen' }))
     expect(handlers.ondelete).toHaveBeenCalledOnce()
   })
 
