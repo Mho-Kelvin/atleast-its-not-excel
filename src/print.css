@@ -3,9 +3,13 @@
  * take away the app chrome and leave the table.
  */
 
+/* Chrome and Edge draw their own header and footer (URL, date, title, page
+   number) inside the page margin. A zero margin leaves them nowhere to draw,
+   which is the only way to switch them off from CSS; the margin moves onto the
+   body. Firefox ignores the trick and keeps its own dialog setting. */
 @page {
   size: A4 portrait;
-  margin: 15mm 12mm;
+  margin: 0;
 }
 
 @media print {
@@ -34,6 +38,10 @@
   body {
     background: #fff;
     color: #000;
+    /* The page margin the @page rule gave up. Left and right hold on every
+       page; top and bottom only on the first and the last, which is what a
+       zero page margin costs. */
+    padding: 15mm 12mm;
   }
 
   /* Toolbars, row and column controls, validation hints: none of it prints. */
