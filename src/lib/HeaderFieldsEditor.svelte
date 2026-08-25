@@ -83,7 +83,10 @@
     background: #fff;
   }
 
+  /* An auto track soaks up the row's free space, which made the button as wide
+     as the screen was empty. */
   .icon {
+    justify-self: start;
     padding: var(--space-1);
     border-color: transparent;
     background: none;

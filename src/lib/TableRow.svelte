@@ -180,13 +180,12 @@
     padding: 0.15rem;
   }
 
-  /* In the DOM from the first render, so the keyboard reaches it; quiet until
-     the row is approached. */
+  /* Quiet, but always drawn: a touch screen has no hover to reveal it with. */
   .icon {
     padding: var(--space-1);
     border-color: transparent;
     background: none;
-    color: transparent;
+    color: var(--ink-faint);
   }
 
   tr:hover .icon,
