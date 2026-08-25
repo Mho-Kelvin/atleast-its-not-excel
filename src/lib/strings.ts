@@ -9,7 +9,6 @@ export const strings = {
   startTimeColumn: 'Uhrzeit',
   durationInvalid: 'Dauer nicht lesbar',
 
-  addRow: 'Zeile hinzufügen',
   removeRow: 'Zeile löschen',
   dragRow: 'Zeile verschieben',
   dragColumn: 'Spalte verschieben',
@@ -57,7 +56,6 @@ export const strings = {
   confirmDeleteList: 'Diese Liste löschen? Spalten, die sie nutzen, verlieren ihre Auswahl.',
 
   headerFields: 'Kopfzeile',
-  addHeaderField: 'Feld hinzufügen',
   removeHeaderField: 'Feld löschen',
   headerFieldLabel: 'Bezeichnung',
   headerFieldValue: 'Inhalt',

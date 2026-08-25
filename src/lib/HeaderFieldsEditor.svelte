@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createHeaderField } from './document'
   import { strings } from './strings'
   import type { ScheduleDocument } from './types'
 
@@ -12,6 +11,9 @@
 
 <section>
   {#each plan.headerFields as field, index (field.id)}
+    <!-- The last empty field is the draft: it becomes a real field as soon as
+         someone types in it, and a fresh draft takes its place below. -->
+    {@const draft = index === plan.headerFields.length - 1 && isEmpty(field.label, field.value)}
     <div class="field" class:empty={isEmpty(field.label, field.value)}>
       <input
         type="text"
@@ -27,24 +29,18 @@
         placeholder={strings.headerFieldValue}
         bind:value={field.value}
       />
-      <button
-        type="button"
-        class="no-print"
-        title={strings.removeHeaderField}
-        onclick={() => plan.headerFields.splice(index, 1)}
-      >
-        ✕
-      </button>
+      {#if !draft}
+        <button
+          type="button"
+          class="no-print"
+          title={strings.removeHeaderField}
+          onclick={() => plan.headerFields.splice(index, 1)}
+        >
+          ✕
+        </button>
+      {/if}
     </div>
   {/each}
-
-  <button
-    type="button"
-    class="no-print"
-    onclick={() => plan.headerFields.push(createHeaderField())}
-  >
-    {strings.addHeaderField}
-  </button>
 </section>
 
 <style>

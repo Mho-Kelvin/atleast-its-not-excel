@@ -19,6 +19,30 @@ export function createRow(columns: readonly Column[]): Row {
   return { id: newId(), cells }
 }
 
+/** A drag placeholder carries no cells, so it counts as empty rather than throwing. */
+export function isRowEmpty(row: Row): boolean {
+  return Object.values(row.cells ?? {}).every((value) => value.trim() === '')
+}
+
+function isHeaderFieldEmpty(field: HeaderField): boolean {
+  return field.label.trim() === '' && field.value.trim() === ''
+}
+
+/**
+ * The last row and the last header field are drafts: they are already there to
+ * type into, and filling one makes the next appear. That is the only way to add
+ * either, so there is no button for it.
+ */
+export function ensureDrafts(document: ScheduleDocument): void {
+  const lastField = document.headerFields.at(-1)
+  if (!lastField || !isHeaderFieldEmpty(lastField)) {
+    document.headerFields.push(createHeaderField())
+  }
+
+  const lastRow = document.rows.at(-1)
+  if (!lastRow || !isRowEmpty(lastRow)) document.rows.push(createRow(document.columns))
+}
+
 export function createDocument(title: string): ScheduleDocument {
   const columns = [
     createColumn('Dauer', 'duration'),

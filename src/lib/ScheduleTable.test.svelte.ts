@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ScheduleTable from './ScheduleTable.svelte'
-import { createDocument, findDurationColumn } from './document'
+import { createDocument, createRow, findDurationColumn } from './document'
 import { createList } from './lists'
 import type { SelectList } from './types'
 
@@ -344,14 +344,30 @@ describe('cell fields', () => {
     expect(fields()[0].closest('.field')?.getAttribute('data-value')).toBe('Zwei\nZeilen')
   })
 
-  it('adds a row on Enter in the last row and leaves Shift+Enter to the text', async () => {
+  it('steps to the cell below on Enter and leaves Shift+Enter to the text', async () => {
     const plan = renderTable()
-    const rows = plan.rows.length
+    plan.rows.push(createRow(plan.columns))
+    await Promise.resolve()
 
-    await fireEvent.keyDown(fields().at(-1)!, { key: 'Enter', shiftKey: true })
-    expect(plan.rows).toHaveLength(rows)
+    const perRow = plan.columns.filter((column) => column.type !== 'select').length
+    const first = fields()[0]
+    const below = fields()[perRow]
+    first.focus()
 
-    await fireEvent.keyDown(fields().at(-1)!, { key: 'Enter' })
-    expect(plan.rows).toHaveLength(rows + 1)
+    await fireEvent.keyDown(first, { key: 'Enter', shiftKey: true })
+    expect(document.activeElement).toBe(first)
+
+    await fireEvent.keyDown(first, { key: 'Enter' })
+    expect(document.activeElement).toBe(below)
+  })
+
+  it('does nothing on Enter in the last row, where there is nothing below', async () => {
+    renderTable()
+    const last = fields().at(-1)!
+    last.focus()
+
+    await fireEvent.keyDown(last, { key: 'Enter' })
+
+    expect(document.activeElement).toBe(last)
   })
 })

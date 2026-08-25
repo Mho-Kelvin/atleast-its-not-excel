@@ -12,13 +12,10 @@ function renderEditor(fields = [createHeaderField('Ort')]) {
 }
 
 describe('HeaderFieldsEditor', () => {
-  it('adds an empty field', async () => {
-    const plan = renderEditor([])
+  it('leaves the trailing draft without a delete button, so only real fields can go', () => {
+    renderEditor([createHeaderField('Ort'), createHeaderField('')])
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Feld hinzufügen' }))
-
-    expect(plan.headerFields).toHaveLength(1)
-    expect(plan.headerFields[0].label).toBe('')
+    expect(screen.getAllByTitle('Feld löschen')).toHaveLength(1)
   })
 
   it('writes the label and the value back to the document', async () => {

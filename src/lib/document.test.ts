@@ -11,6 +11,7 @@ import {
   createHeaderField,
   createRow,
   duplicateDocument,
+  ensureDrafts,
   columnsFromDndItems,
   findDurationColumn,
   headerSlots,
@@ -26,6 +27,62 @@ describe('createDocument', () => {
     expect(findDurationColumn(document.columns)?.title).toBe('Dauer')
     expect(document.rows).toHaveLength(1)
     expect(Object.values(document.rows[0].cells)).toEqual(['', '', ''])
+  })
+})
+
+describe('ensureDrafts', () => {
+  it('offers an empty header field and keeps the empty row a document starts with', () => {
+    const document = createDocument('Ablauf')
+
+    ensureDrafts(document)
+
+    expect(document.headerFields).toHaveLength(1)
+    expect(document.headerFields[0]).toMatchObject({ label: '', value: '' })
+    expect(document.rows).toHaveLength(1)
+  })
+
+  it('adds nothing while the last row and the last field are still empty', () => {
+    const document = createDocument('Ablauf')
+    ensureDrafts(document)
+
+    ensureDrafts(document)
+    ensureDrafts(document)
+
+    expect(document.headerFields).toHaveLength(1)
+    expect(document.rows).toHaveLength(1)
+  })
+
+  it('puts a fresh draft below the one that was filled in', () => {
+    const document = createDocument('Ablauf')
+    ensureDrafts(document)
+    document.headerFields[0].value = 'Saal'
+    document.rows[0].cells[document.columns[1].id] = 'Begrüßung'
+
+    ensureDrafts(document)
+
+    expect(document.headerFields).toHaveLength(2)
+    expect(document.headerFields[1]).toMatchObject({ label: '', value: '' })
+    expect(document.rows).toHaveLength(2)
+    expect(Object.keys(document.rows[1].cells)).toEqual(document.columns.map((it) => it.id))
+  })
+
+  it('counts a field holding only a label as filled in', () => {
+    const document = createDocument('Ablauf')
+    document.headerFields = [createHeaderField('Ort')]
+
+    ensureDrafts(document)
+
+    expect(document.headerFields).toHaveLength(2)
+  })
+
+  it('leaves the rows alone while the drag placeholder sits at the end', () => {
+    const document = createDocument('Ablauf')
+    document.rows[0].cells[document.columns[1].id] = 'Begrüßung'
+    document.rows.push({ id: SHADOW_PLACEHOLDER_ITEM_ID } as Row)
+
+    ensureDrafts(document)
+
+    expect(document.rows).toHaveLength(2)
   })
 })
 

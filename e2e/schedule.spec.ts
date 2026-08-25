@@ -18,10 +18,9 @@ async function openNewDocument(page: Page): Promise<void> {
 test('a typed duration moves the next row down the clock', async ({ page }) => {
   await openNewDocument(page)
 
+  // No row is added by hand: filling the draft row puts a fresh one below it.
   await page.fill(durationInput(1), '15')
-  await page.getByRole('button', { name: 'Zeile hinzufügen' }).click()
   await page.fill(durationInput(2), '1h30')
-  await page.getByRole('button', { name: 'Zeile hinzufügen' }).click()
 
   await expect(page.locator('tbody .time-column')).toHaveText(['09:00', '09:15', '10:45'])
 })
@@ -30,10 +29,41 @@ test('an unreadable duration stops the clock instead of guessing', async ({ page
   await openNewDocument(page)
 
   await page.fill(durationInput(1), 'tbd')
-  await page.getByRole('button', { name: 'Zeile hinzufügen' }).click()
 
   await expect(page.locator('tbody .time-column')).toHaveText(['09:00', ''])
   await expect(page.locator('textarea.cell-invalid')).toHaveCount(1)
+})
+
+test('filling a draft line makes a fresh one, in the header and in the table', async ({ page }) => {
+  await openNewDocument(page)
+
+  await expect(page.getByLabel('Bezeichnung')).toHaveCount(1)
+  await page.getByLabel('Bezeichnung').fill('Ort')
+  await expect(page.getByLabel('Bezeichnung')).toHaveCount(2)
+
+  await expect(page.locator('tbody tr')).toHaveCount(1)
+  await textInput(page, 1).fill('Begrüßung')
+  await expect(page.locator('tbody tr')).toHaveCount(2)
+})
+
+test('filling the draft row costs one undo step, not two', async ({ page }) => {
+  await openNewDocument(page)
+  await textInput(page, 1).fill('Begrüßung')
+  await expect(page.locator('tbody tr')).toHaveCount(2)
+
+  await page.getByRole('button', { name: 'Rückgängig' }).click()
+
+  await expect(textInput(page, 1)).toHaveValue('')
+  await expect(page.locator('tbody tr')).toHaveCount(1)
+})
+
+test('Enter steps down into the row below', async ({ page }) => {
+  await openNewDocument(page)
+
+  await textInput(page, 1).fill('Begrüßung')
+  await textInput(page, 1).press('Enter')
+
+  await expect(textInput(page, 2)).toBeFocused()
 })
 
 test('print media hides the app chrome and keeps the table', async ({ page }) => {
@@ -43,7 +73,7 @@ test('print media hides the app chrome and keeps the table', async ({ page }) =>
   await page.emulateMedia({ media: 'print' })
 
   await expect(page.getByRole('button', { name: 'Drucken' })).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Zeile hinzufügen' })).toBeHidden()
+  await expect(page.locator('tbody tr.draft')).toBeHidden()
   await expect(page.getByTitle('Spalte hinzufügen')).toBeHidden()
   await expect(page.getByTitle('Spalte verschieben').first()).toBeHidden()
   await expect(page.locator('table')).toBeVisible()
@@ -123,8 +153,9 @@ test('a dropdown column offers the values of its list', async ({ page }) => {
   await page.getByRole('button', { name: 'Auswahllisten' }).click()
   await page.getByLabel('Name der Liste').fill('Räume')
   await page.getByRole('button', { name: 'Neue Liste' }).click()
+  // Enter, not the button: the start-time card carries a button of the same name.
   await page.getByLabel('Wert hinzufügen: Räume').fill('Saal')
-  await page.getByRole('button', { name: 'Wert hinzufügen' }).click()
+  await page.getByLabel('Wert hinzufügen: Räume').press('Enter')
   await page.getByRole('button', { name: 'Zurück' }).click()
 
   await page.getByRole('button', { name: 'Neues Dokument' }).click()
@@ -182,7 +213,7 @@ test('dragging the start time moves the duration column with it', async ({ page 
   await expect(page.locator('thead .time-column')).toHaveCount(1)
   await expect(headings.nth(3)).toContainText('Uhrzeit')
   await expect(headings.nth(4)).toHaveText('Dauer')
-  await expect(page.locator('tbody .time-column')).toHaveText(['09:00'])
+  await expect(page.locator('tbody .time-column')).toHaveText(['09:00', '09:15'])
 })
 
 test('deleting the start time takes the duration column with it', async ({ page }) => {
@@ -224,7 +255,6 @@ test('rows can be dragged into a new order', async ({ page }) => {
   await openNewDocument(page)
 
   await textInput(page, 1).fill('Erste')
-  await page.getByRole('button', { name: 'Zeile hinzufügen' }).click()
   await textInput(page, 2).fill('Zweite')
 
   const handle = page.locator('tbody tr:nth-child(1) .drag-handle')
@@ -263,7 +293,7 @@ test('a dropdown shows its longest value in full', async ({ page }) => {
   await page.getByLabel('Name der Liste').fill('Räume')
   await page.getByRole('button', { name: 'Neue Liste' }).click()
   await page.getByLabel('Wert hinzufügen: Räume').fill('Honigkuchenpferd im großen Saal')
-  await page.getByRole('button', { name: 'Wert hinzufügen' }).click()
+  await page.getByLabel('Wert hinzufügen: Räume').press('Enter')
   await page.getByRole('button', { name: 'Zurück' }).click()
 
   await page.getByRole('button', { name: 'Neues Dokument' }).click()

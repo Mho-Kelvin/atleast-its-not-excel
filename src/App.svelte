@@ -3,7 +3,7 @@
   import HeaderFieldsEditor from './lib/HeaderFieldsEditor.svelte'
   import ListManager from './lib/ListManager.svelte'
   import ScheduleTable from './lib/ScheduleTable.svelte'
-  import { createDocument, duplicateDocument } from './lib/document'
+  import { createDocument, duplicateDocument, ensureDrafts } from './lib/document'
   import { clear, createHistory, record, redo, undo } from './lib/history'
   import { CUSTOM_VALUE } from './lib/lists'
   import { formatStartTime, parseTimeOfDay } from './lib/schedule'
@@ -60,6 +60,15 @@
     const { updatedAt: _ignored, ...rest } = document
     return JSON.stringify(rest)
   }
+
+  // Declared before the recording effect on purpose: the draft row it appends
+  // is part of the same change, so one keystroke still costs one undo step.
+  // Held off during a drag, which is rewriting the row order anyway.
+  $effect(() => {
+    const document = store.documents[currentIndex]
+    if (!document || dragging) return
+    ensureDrafts(document)
+  })
 
   // localStorage on every keystroke. ponytail: no debounce, add one if a big
   // document ever makes typing feel heavy.

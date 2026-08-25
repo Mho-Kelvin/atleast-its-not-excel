@@ -5,10 +5,10 @@
     addColumn,
     columnsFromDndItems,
     createColumn,
-    createRow,
     findDurationColumn,
     headerSlots,
     isDragPlaceholder,
+    isRowEmpty,
     removeColumn,
     rowsFromDndItems,
     HANDLE_SLOT,
@@ -80,16 +80,17 @@
     if (active) node.focus()
   }
 
-  function addRow(): void {
-    plan.rows.push(createRow(plan.columns))
-  }
-
-  /** Cells are multi-line boxes, so a newline needs Shift; plain Enter keeps
-      adding a row at the end, as it did when they were single-line inputs. */
-  function onCellKeydown(event: KeyboardEvent, rowIndex: number): void {
+  /** Cells are multi-line boxes, so a newline needs Shift. Plain Enter steps to
+      the same cell one row down; the draft row means there is always one there
+      once this row holds text, so nothing has to be added first. */
+  function onCellKeydown(event: KeyboardEvent): void {
     if (event.key !== 'Enter' || event.shiftKey) return
     event.preventDefault()
-    if (rowIndex === plan.rows.length - 1) addRow()
+
+    const cell = (event.currentTarget as HTMLElement).closest('td')
+    const below = cell?.closest('tr')?.nextElementSibling
+    const field = below?.children[cell!.cellIndex]?.querySelector('textarea, select')
+    if (field instanceof HTMLElement) field.focus()
   }
 
   // headerSlots always parks the start-time cell next to the duration column,
@@ -302,7 +303,10 @@
       {#if isDragPlaceholder(row)}
         <tr class="no-print"></tr>
       {:else}
-      <tr>
+      <!-- The last empty row is the draft: typing in it makes it a real row and
+           a fresh draft appears below, so nothing on paper is ever blank. -->
+      {@const draft = rowIndex === plan.rows.length - 1 && isRowEmpty(row)}
+      <tr class:draft>
         {#each slots as slot (slot.id)}
           {#if isDragPlaceholder(slot)}
             <td class="no-print"></td>
@@ -323,9 +327,11 @@
             </td>
           {:else if slot.id === TRAILING_SLOT.id}
             <td class="no-print">
-              <button type="button" onclick={() => plan.rows.splice(rowIndex, 1)}>
-                {strings.removeRow}
-              </button>
+              {#if !draft}
+                <button type="button" onclick={() => plan.rows.splice(rowIndex, 1)}>
+                  {strings.removeRow}
+                </button>
+              {/if}
             </td>
           {:else}
             {@const column = asColumn(slot)}
@@ -336,7 +342,7 @@
             >
               {#if column.type === 'select'}
                 {#if isCustomCell(row, column, row.cells[column.id] ?? '')}
-                  {@render cellField(row, column, rowIndex, true)}
+                  {@render cellField(row, column, true)}
                 {:else}
                   <select
                     value={row.cells[column.id] ?? ''}
@@ -350,7 +356,7 @@
                   </select>
                 {/if}
               {:else}
-                {@render cellField(row, column, rowIndex, false)}
+                {@render cellField(row, column, false)}
               {/if}
             </td>
           {/if}
@@ -361,12 +367,10 @@
   </tbody>
 </table>
 
-<button type="button" class="no-print" onclick={addRow}>{strings.addRow}</button>
-
 <!-- Every editable cell is the same box: it grows with its own text instead of
      cropping it, and there is nothing to drag open. The wrapper holds a hidden
      copy of the value, which is what gives the grid cell its height. -->
-{#snippet cellField(row: Row, column: Column, rowIndex: number, isNewCustomValue: boolean)}
+{#snippet cellField(row: Row, column: Column, isNewCustomValue: boolean)}
   {@const value = row.cells[column.id] ?? ''}
   {@const invalid = column.type === 'duration' && isUnreadableDuration(value)}
   <span class="field" data-value={value}>
@@ -377,7 +381,7 @@
       use:focusIfNew={isNewCustomValue}
       bind:value={row.cells[column.id]}
       onblur={() => column.type === 'select' && leaveCustom(row, column)}
-      onkeydown={(event) => onCellKeydown(event, rowIndex)}
+      onkeydown={onCellKeydown}
     ></textarea>
   </span>
 {/snippet}
@@ -697,5 +701,12 @@
 
   .cell-invalid {
     background: #ffe8e8;
+  }
+
+  @media print {
+    /* The draft row is an offer to type, not a line of the schedule. */
+    .draft {
+      display: none;
+    }
   }
 </style>
