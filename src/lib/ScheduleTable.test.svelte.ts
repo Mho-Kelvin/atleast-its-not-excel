@@ -129,10 +129,11 @@ describe('column headers', () => {
     const plan = await dropdownColumn(['Saal', 'Foyer'])
     const column = plan.columns.find((it) => it.title === 'Verantwortlich')!
     const dropdown = selectCell()
+    // Alphabetical, whatever order the list was written in.
     expect([...dropdown.options].map((option) => option.text)).toEqual([
       '',
-      'Saal',
       'Foyer',
+      'Saal',
       'Eigener Wert …',
     ])
 

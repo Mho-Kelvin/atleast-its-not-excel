@@ -155,9 +155,8 @@ test('a dropdown column offers the values of its list', async ({ page }) => {
   await page.getByRole('button', { name: 'Auswahllisten' }).click()
   await page.getByLabel('Name der Liste').fill('Räume')
   await page.getByRole('button', { name: 'Neue Liste' }).click()
-  // Enter, not the button: the start-time card carries a button of the same name.
-  await page.getByLabel('Wert hinzufügen: Räume').fill('Saal')
-  await page.getByLabel('Wert hinzufügen: Räume').press('Enter')
+  // No add button: the empty entry at the end of the list is the new one.
+  await page.getByLabel('Wert: Räume').fill('Saal')
   await page.getByRole('button', { name: 'Schließen' }).click()
 
   await page.getByRole('button', { name: 'Neues Dokument' }).click()
@@ -173,6 +172,46 @@ test('a dropdown column offers the values of its list', async ({ page }) => {
   await cell.locator('select').selectOption('__custom__')
   await cell.locator('textarea').fill('Küche')
   await expect(cell.locator('textarea')).toHaveValue('Küche')
+})
+
+test('the lists dialog closes on a click beside it, not on one inside it', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Auswahllisten' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+
+  // The dialog's own padding is part of the element the backdrop click lands on.
+  const box = (await dialog.boundingBox())!
+  await page.mouse.click(box.x + 4, box.y + 4)
+  await expect(dialog).toBeVisible()
+
+  await page.mouse.click(5, 5)
+  await expect(dialog).toBeHidden()
+})
+
+test('an edited list value reaches the cells that offer it', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Auswahllisten' }).click()
+  await page.getByLabel('Name der Liste').fill('Räume')
+  await page.getByRole('button', { name: 'Neue Liste' }).click()
+  await page.getByLabel('Wert: Räume').fill('Sal')
+  await page.getByRole('button', { name: 'Schließen' }).click()
+
+  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await page.getByTitle('Spalte hinzufügen').click()
+  await page.getByLabel('Spaltenname').fill('Ort')
+  await page.getByLabel('Typ').selectOption('select')
+  await page.getByLabel('Liste', { exact: true }).selectOption({ label: 'Räume' })
+
+  // The typo is corrected in place, not deleted and typed again.
+  await page.getByTitle('Listen bearbeiten').click()
+  await page.getByLabel('Wert: Räume').first().fill('Saal')
+  await page.getByRole('button', { name: 'Schließen' }).click()
+
+  const cell = page.locator('tbody tr:nth-child(1) td[data-column-type="select"] select')
+  await expect(cell.locator('option')).toHaveText(['', 'Saal', 'Eigener Wert …'])
+  await cell.selectOption('Saal')
+  await expect(cell).toHaveValue('Saal')
 })
 
 test('columns can be dragged into a new order', async ({ page }) => {
@@ -291,8 +330,7 @@ test('a dropdown shows its longest value in full', async ({ page }) => {
   await page.getByRole('button', { name: 'Auswahllisten' }).click()
   await page.getByLabel('Name der Liste').fill('Räume')
   await page.getByRole('button', { name: 'Neue Liste' }).click()
-  await page.getByLabel('Wert hinzufügen: Räume').fill('Honigkuchenpferd im großen Saal')
-  await page.getByLabel('Wert hinzufügen: Räume').press('Enter')
+  await page.getByLabel('Wert: Räume').fill('Honigkuchenpferd im großen Saal')
   await page.getByRole('button', { name: 'Schließen' }).click()
 
   await page.getByRole('button', { name: 'Neues Dokument' }).click()

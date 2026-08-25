@@ -3,7 +3,7 @@
   import Icon from './Icon.svelte'
   import ScheduleTable from './ScheduleTable.svelte'
   import { ensureDrafts } from './document'
-  import { CUSTOM_VALUE } from './lists'
+  import { CUSTOM_VALUE, startTimeOptions } from './lists'
   import { formatStartTime, parseTimeOfDay } from './schedule'
   import { strings } from './strings'
   import { createUndoTracker } from './undoTracker.svelte'
@@ -25,19 +25,32 @@
 
   const startTimeIsValid = $derived(parseTimeOfDay(plan.startTime) !== null)
 
+  const startTimeChoices = $derived(startTimeOptions(startTimes))
+
   let customStartTime = $state(false)
   const startTimeIsCustom = $derived(
     customStartTime ||
-      (plan.startTime !== '' && !startTimes.some((entry) => entry.time === plan.startTime)),
+      (plan.startTime !== '' && !startTimeChoices.some((entry) => entry.time === plan.startTime)),
+  )
+
+  // Two entries may share a time, so the document remembers which one was picked.
+  // An entry that has since been deleted falls back to the first on that time.
+  const chosenStartTime = $derived(
+    startTimeChoices.find(
+      (entry) => entry.id === plan.startTimeId && entry.time === plan.startTime,
+    ) ?? startTimeChoices.find((entry) => entry.time === plan.startTime),
   )
 
   function chooseStartTime(chosen: string): void {
     if (chosen === CUSTOM_VALUE) {
       customStartTime = true
       plan.startTime = ''
+      plan.startTimeId = undefined
       return
     }
-    plan.startTime = chosen
+    const entry = startTimeChoices.find((option) => option.id === chosen)
+    plan.startTime = entry?.time ?? ''
+    plan.startTimeId = entry?.id
   }
 
   function leaveCustomStartTime(): void {
@@ -148,15 +161,15 @@
     <p class="start">
       <span class="clock no-print"><Icon name="clock" size={16} /></span>
       <label for="start-time">{strings.startTimeLabel}</label>
-      {#if startTimes.length > 0 && !startTimeIsCustom}
+      {#if startTimeChoices.length > 0 && !startTimeIsCustom}
         <select
           id="start-time"
-          value={plan.startTime}
+          value={chosenStartTime?.id ?? ''}
           onchange={(event) => chooseStartTime(event.currentTarget.value)}
         >
           <option value=""></option>
-          {#each startTimes as entry (entry.time)}
-            <option value={entry.time}>{formatStartTime(entry)}</option>
+          {#each startTimeChoices as entry (entry.id)}
+            <option value={entry.id}>{formatStartTime(entry)}</option>
           {/each}
           <option value={CUSTOM_VALUE}>{strings.customValue}</option>
         </select>

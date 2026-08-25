@@ -23,6 +23,7 @@ export interface SelectList {
 }
 
 export interface StartTime {
+  id: string
   time: string
   /** Optional label, shown in front of the time. */
   name?: string
@@ -40,6 +41,11 @@ export interface ScheduleDocument {
   headerFields: HeaderField[]
   /** Time of day the first row starts, as "09:00". */
   startTime: string
+  /**
+   * Which start-time entry was picked. Only needed to tell two entries on the
+   * same time apart; the time above is what everything else reads.
+   */
+  startTimeId?: string
   columns: Column[]
   rows: Row[]
   /** The start-time cell is not a column, so its name and print flag live here. */

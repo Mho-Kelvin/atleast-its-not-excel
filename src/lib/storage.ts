@@ -1,3 +1,4 @@
+import { createStartTime } from './lists'
 import type { ScheduleDocument, SelectList, StartTime, Store } from './types'
 
 const STORAGE_KEY = 'tobias-tool/v1'
@@ -37,9 +38,14 @@ export function loadStore(): Store {
   return parsed
 }
 
-/** Older stores carry no start times at all, or carry them as bare time strings. */
+/**
+ * Older stores carry no start times at all, carry them as bare time strings, or
+ * carry them without the id a document points at.
+ */
 function toStartTime(entry: unknown): StartTime {
-  return typeof entry === 'string' ? { time: entry } : (entry as StartTime)
+  if (typeof entry === 'string') return createStartTime(entry)
+  const stored = entry as StartTime
+  return typeof stored.id === 'string' ? stored : { ...stored, id: crypto.randomUUID() }
 }
 
 /** Returns false when the browser refused the write, e.g. the quota is full. */

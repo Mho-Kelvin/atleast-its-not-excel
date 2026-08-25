@@ -1,10 +1,16 @@
 <script lang="ts">
   import ConfirmDialog from './ConfirmDialog.svelte'
   import Icon from './Icon.svelte'
-  import { createList, removeList } from './lists'
-  import { formatStartTime } from './schedule'
+  import {
+    createList,
+    ensureListDrafts,
+    isDuplicateStartTime,
+    isDuplicateValue,
+    isStartTimeMissing,
+    removeList,
+  } from './lists'
   import { strings } from './strings'
-  import type { SelectList, Store } from './types'
+  import type { SelectList, StartTime, Store } from './types'
 
   let {
     store = $bindable(),
@@ -23,38 +29,46 @@
     node.showModal()
   }
 
+  /**
+   * The backdrop belongs to the dialog element, so a click on it lands on the
+   * dialog itself. The padding does too, hence the second test: only a point
+   * outside the box is the backdrop. A click from the keyboard reports 0/0 and
+   * never targets the dialog, so it cannot be mistaken for one.
+   */
+  function closeOnBackdrop(event: MouseEvent): void {
+    if (event.target !== event.currentTarget) return
+    const box = (event.currentTarget as HTMLDialogElement).getBoundingClientRect()
+    const outside =
+      event.clientX < box.left ||
+      event.clientX > box.right ||
+      event.clientY < box.top ||
+      event.clientY > box.bottom
+    if (outside) onclose()
+  }
+
+  function startTimeProblem(entries: StartTime[], index: number): string {
+    if (isStartTimeMissing(entries[index])) return strings.startTimeMissing
+    if (isDuplicateStartTime(entries, index)) return strings.duplicateEntry
+    return ''
+  }
+
   function scrollToFocused(node: HTMLElement, id: string | undefined): void {
     if (id !== undefined && id === focusListId) node.scrollIntoView({ block: 'center' })
   }
 
   let newListName = $state('')
-  let newValues = $state<Record<string, string>>({})
-  let newStartTime = $state('')
-  let newStartTimeName = $state('')
+
+  // Entries are added by typing into the empty one at the end, so the drafts are
+  // topped up while the dialog is open rather than on a button.
+  $effect(() => {
+    if (open) ensureListDrafts(store)
+  })
 
   function add(): void {
     const name = newListName.trim()
     if (name === '') return
     store.lists.push(createList(name))
     newListName = ''
-  }
-
-  function addValue(list: SelectList): void {
-    const value = (newValues[list.id] ?? '').trim()
-    if (value === '' || list.values.includes(value)) return
-    list.values.push(value)
-    newValues[list.id] = ''
-  }
-
-  /** The time input hands over "09:00" or nothing at all, so there is no text to check. */
-  function addStartTime(): void {
-    if (newStartTime === '' || store.startTimes.some((entry) => entry.time === newStartTime)) return
-    const name = newStartTimeName.trim()
-    store.startTimes = [...store.startTimes, { time: newStartTime, name: name || undefined }].sort(
-      (a, b) => a.time.localeCompare(b.time),
-    )
-    newStartTime = ''
-    newStartTimeName = ''
   }
 
   let removing = $state<SelectList | null>(null)
@@ -66,7 +80,13 @@
 </script>
 
 {#if open}
-  <dialog use:asModal class="no-print" aria-labelledby="lists-title" oncancel={onclose}>
+  <dialog
+    use:asModal
+    class="no-print"
+    aria-labelledby="lists-title"
+    oncancel={onclose}
+    onclick={closeOnBackdrop}
+  >
     <div class="bar">
       <h1 id="lists-title">{strings.lists}</h1>
       <button
@@ -99,34 +119,32 @@
       </header>
 
       <ul>
-        {#each store.startTimes as entry, index (entry.time)}
+        {#each store.startTimes as entry, index (entry.id)}
+          {@const problem = startTimeProblem(store.startTimes, index)}
           <li>
-            <span>{formatStartTime(entry)}</span>
-            {@render removeValueButton(() => store.startTimes.splice(index, 1))}
+            <input
+              type="text"
+              aria-label={strings.startTimeNameLabel}
+              placeholder={strings.startTimeNameLabel}
+              bind:value={entry.name}
+            />
+            <input
+              type="time"
+              class="time"
+              class:invalid={problem !== ''}
+              aria-label={strings.startTimeValueLabel}
+              aria-invalid={problem !== ''}
+              title={problem}
+              bind:value={entry.time}
+            />
+            {#if index < store.startTimes.length - 1}
+              {@render removeValueButton(() => store.startTimes.splice(index, 1))}
+            {:else}
+              <span class="spacer"></span>
+            {/if}
           </li>
         {/each}
       </ul>
-
-      <div class="add">
-        <input
-          type="text"
-          aria-label={strings.startTimeNameLabel}
-          placeholder={strings.startTimeNameLabel}
-          bind:value={newStartTimeName}
-        />
-        <input
-          type="time"
-          aria-label={`${strings.addValue}: ${strings.startTimeList}`}
-          bind:value={newStartTime}
-          onkeydown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              addStartTime()
-            }
-          }}
-        />
-        {@render addValueButton(addStartTime)}
-      </div>
     </article>
 
     {#if store.lists.length === 0}
@@ -149,44 +167,30 @@
         </header>
 
         <ul>
-          {#each list.values as value, index (value)}
+          <!-- Unkeyed on purpose: the value is what is being edited, so it cannot key its own row. -->
+          {#each list.values, index}
+            {@const duplicate = isDuplicateValue(list.values, index)}
             <li>
-              <span>{value}</span>
-              {@render removeValueButton(() => list.values.splice(index, 1))}
+              <input
+                type="text"
+                class:invalid={duplicate}
+                aria-label={`${strings.valueLabel}: ${list.name}`}
+                aria-invalid={duplicate}
+                title={duplicate ? strings.duplicateEntry : ''}
+                bind:value={list.values[index]}
+              />
+              {#if index < list.values.length - 1}
+                {@render removeValueButton(() => list.values.splice(index, 1))}
+              {:else}
+                <span class="spacer"></span>
+              {/if}
             </li>
           {/each}
         </ul>
-
-        <div class="add">
-          <input
-            type="text"
-            aria-label={`${strings.addValue}: ${list.name}`}
-            bind:value={newValues[list.id]}
-            onkeydown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                addValue(list)
-              }
-            }}
-          />
-          {@render addValueButton(() => addValue(list))}
-        </div>
       </article>
     {/each}
   </dialog>
 {/if}
-
-{#snippet addValueButton(onclick: () => void)}
-  <button
-    type="button"
-    class="icon"
-    title={strings.addValue}
-    aria-label={strings.addValue}
-    {onclick}
-  >
-    <Icon name="add" size={18} />
-  </button>
-{/snippet}
 
 {#snippet removeValueButton(onclick: () => void)}
   <button
@@ -280,7 +284,6 @@
   li {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: var(--space-2);
     padding: 0.15rem 0;
     border-bottom: 1px solid var(--grid-line);
@@ -288,6 +291,26 @@
 
   li:last-child {
     border-bottom: none;
+  }
+
+  li input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .time {
+    flex: none;
+  }
+
+  .invalid {
+    color: var(--red);
+    border-color: var(--red);
+  }
+
+  /* Holds the delete button's width, so the draft row lines up with the rest. */
+  .spacer {
+    flex: none;
+    width: calc(16px + 2 * var(--space-2) + 2px);
   }
 
   .add {

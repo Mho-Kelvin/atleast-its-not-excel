@@ -49,7 +49,30 @@ describe('loadStore', () => {
       JSON.stringify({ documents: [], lists: [], startTimes: ['08:30'] }),
     )
 
-    expect(loadStore().startTimes).toEqual([{ time: '08:30' }])
+    expect(loadStore().startTimes).toEqual([{ id: expect.any(String), time: '08:30', name: '' }])
+  })
+
+  it('gives a start time stored without an id one of its own', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        documents: [],
+        lists: [],
+        startTimes: [{ time: '08:30', name: 'Empfang' }],
+      }),
+    )
+
+    const [entry] = loadStore().startTimes
+    expect(entry).toEqual({ id: expect.any(String), time: '08:30', name: 'Empfang' })
+  })
+
+  it('leaves an id that is already stored alone', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ documents: [], lists: [], startTimes: [{ id: 'kept', time: '08:30' }] }),
+    )
+
+    expect(loadStore().startTimes[0].id).toBe('kept')
   })
 
   it('reads a column stored as the removed longText type as text', () => {

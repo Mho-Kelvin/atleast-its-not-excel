@@ -2,12 +2,17 @@ import { fireEvent, render, screen } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it } from 'vitest'
 import App from './App.svelte'
 import { createDocument } from './lib/document'
+import type { StartTime } from './lib/types'
 
 const STORAGE_KEY = 'tobias-tool/v1'
 
-function seed(startTimes: { time: string; name?: string }[], startTime: string): void {
+const EMPFANG: StartTime = { id: 'empfang', time: '08:00', name: 'Empfang' }
+const NEUN: StartTime = { id: 'neun', time: '09:00' }
+
+function seed(startTimes: StartTime[], startTime: string, startTimeId?: string): void {
   const document = createDocument('Ablauf')
   document.startTime = startTime
+  document.startTimeId = startTimeId
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({ documents: [document], lists: [], startTimes }),
@@ -24,6 +29,11 @@ function storedStartTime(): string {
   return store.documents[0].startTime
 }
 
+function storedStartTimeId(): string | undefined {
+  const store = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
+  return store.documents[0].startTimeId
+}
+
 function startTimeField(): HTMLElement {
   return screen.getByLabelText('Beginn')
 }
@@ -34,7 +44,7 @@ beforeEach(() => {
 
 describe('start time', () => {
   it('offers the stored times plus the custom entry, and nothing else to pick from', async () => {
-    seed([{ time: '08:00', name: 'Empfang' }, { time: '09:00' }], '09:00')
+    seed([EMPFANG, NEUN], '09:00')
     await openDocument()
 
     const field = startTimeField() as HTMLSelectElement
@@ -45,21 +55,38 @@ describe('start time', () => {
       '09:00',
       'Eigener Wert …',
     ])
-    expect(field.value).toBe('09:00')
+    expect(field.value).toBe(NEUN.id)
     expect(screen.queryByLabelText('Liste')).toBeNull()
   })
 
   it('stores the picked value', async () => {
-    seed([{ time: '08:00', name: 'Empfang' }, { time: '09:00' }], '09:00')
+    seed([EMPFANG, NEUN], '09:00')
     await openDocument()
 
-    await fireEvent.change(startTimeField(), { target: { value: '08:00' } })
+    await fireEvent.change(startTimeField(), { target: { value: EMPFANG.id } })
 
     expect(storedStartTime()).toBe('08:00')
+    expect(storedStartTimeId()).toBe(EMPFANG.id)
+  })
+
+  it('remembers which of two entries on the same time was picked', async () => {
+    const beginn: StartTime = { id: 'beginn', time: '09:00', name: 'Beginn' }
+    const start: StartTime = { id: 'start', time: '09:00', name: 'Start' }
+    seed([beginn, start], '09:00', start.id)
+    await openDocument()
+
+    expect((startTimeField() as HTMLSelectElement).value).toBe(start.id)
+  })
+
+  it('falls back to the first entry on that time when the picked one is gone', async () => {
+    seed([EMPFANG, NEUN], '09:00', 'deleted')
+    await openDocument()
+
+    expect((startTimeField() as HTMLSelectElement).value).toBe(NEUN.id)
   })
 
   it('swaps in a text box for a value of its own', async () => {
-    seed([{ time: '08:00', name: 'Empfang' }, { time: '09:00' }], '09:00')
+    seed([EMPFANG, NEUN], '09:00')
     await openDocument()
 
     await fireEvent.change(startTimeField(), { target: { value: '__custom__' } })
@@ -71,7 +98,7 @@ describe('start time', () => {
   })
 
   it('hands the dropdown back when the text box is emptied', async () => {
-    seed([{ time: '08:00', name: 'Empfang' }, { time: '09:00' }], '09:00')
+    seed([EMPFANG, NEUN], '09:00')
     await openDocument()
 
     await fireEvent.change(startTimeField(), { target: { value: '__custom__' } })
@@ -81,7 +108,7 @@ describe('start time', () => {
   })
 
   it('shows a stored value that is not on the list as text', async () => {
-    seed([{ time: '08:00' }, { time: '09:00' }], '07:15')
+    seed([EMPFANG, NEUN], '07:15')
     await openDocument()
 
     expect(startTimeField().tagName).toBe('INPUT')
