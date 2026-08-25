@@ -105,6 +105,9 @@
     moreRight = scroller.scrollLeft < furthest - 1
   }
 
+  function startAtLeftEdge(node: HTMLDivElement): void {
+    node.scrollLeft = 0
+  }
   // Read on purpose: adding a column or a row changes how far the table reaches
   // without the container ever resizing.
   $effect(() => {
@@ -175,7 +178,7 @@
 <!-- The table scrolls inside its own box on a narrow screen; the page itself
      never does. The edges fade while there is more table on that side. -->
 <div class="frame" class:more-left={moreLeft} class:more-right={moreRight}>
-  <div class="scroller" bind:this={scroller} onscroll={measureEdges}>
+  <div class="scroller" bind:this={scroller} use:startAtLeftEdge onscroll={measureEdges}>
     <table>
       <thead>
         <tr
