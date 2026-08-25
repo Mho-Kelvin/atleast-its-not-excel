@@ -122,6 +122,63 @@ test('a column switched off is gone from the print, the rest stays', async ({ pa
   await expect(textInput(page, 1)).toBeVisible()
 })
 
+/** Long enough that five of them outgrow an A4 page and six overrun the floor. */
+const WIDE_COLUMNS = [
+  'Verantwortliche Person',
+  'Benötigtes Material',
+  'Zusätzliche Bemerkungen',
+  'Vorbereitung im Team',
+  'Nachbereitung und Abbau',
+  'Ort der Veranstaltung',
+]
+
+async function printScale(page: Page): Promise<number> {
+  const value = await page
+    .locator('table')
+    .evaluate((table) => table.style.getPropertyValue('--print-scale'))
+  return Number(value)
+}
+
+test('a table too wide for A4 is printed smaller, and the toolbar says so', async ({ page }) => {
+  await openNewDocument(page)
+  for (const name of WIDE_COLUMNS.slice(0, 5)) await addColumn(page, name)
+
+  await expect(page.getByText(/Auf \d+% verkleinert$/)).toBeVisible()
+  expect(await printScale(page)).toBeLessThan(1)
+  expect(await printScale(page)).toBeGreaterThanOrEqual(0.8)
+})
+
+test('a table that cannot shrink far enough drops its last column, and takes it back', async ({
+  page,
+}) => {
+  await openNewDocument(page)
+  for (const name of WIDE_COLUMNS) await addColumn(page, name)
+
+  const last = WIDE_COLUMNS[WIDE_COLUMNS.length - 1]
+  await expect(page.getByText(/\d+ Spalten? ausgeblendet/)).toBeVisible()
+  await expect(page.locator(`thead th:has-text("${last}")`)).toHaveClass(/print-auto-hidden/)
+
+  // The mark says the page took it, not that anyone switched it off, and the
+  // column's own checkbox is untouched.
+  await page.getByRole('button', { name: last }).click()
+  await expect(page.getByLabel('Spalte drucken')).toBeChecked()
+  await expect(page.getByText('Passt nicht auf A4, wird ausgeblendet.')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await page.emulateMedia({ media: 'print' })
+  await expect(page.locator(`thead th:has-text("${last}")`)).toBeHidden()
+
+  // Giving up a column by hand buys back the room the last one needed.
+  await page.emulateMedia({ media: 'screen' })
+  await page.getByRole('button', { name: WIDE_COLUMNS[0] }).click()
+  await page.getByLabel('Spalte drucken').uncheck()
+  await page.keyboard.press('Escape')
+
+  await expect(page.locator(`thead th:has-text("${last}")`)).not.toHaveClass(/print-auto-hidden/)
+  await page.emulateMedia({ media: 'print' })
+  await expect(page.locator(`thead th:has-text("${last}")`)).toBeVisible()
+})
+
 test('the page renders onto A4 as a PDF', async ({ page }) => {
   await openNewDocument(page)
   await page.fill(durationInput(1), '15')

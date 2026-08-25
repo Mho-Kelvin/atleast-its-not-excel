@@ -4,6 +4,7 @@
   import ScheduleTable from './ScheduleTable.svelte'
   import { ensureDrafts } from './document'
   import { CUSTOM_VALUE, startTimeOptions } from './lists'
+  import { printFitNotice, PRINTS_AS_IS, type PrintFit } from './printFit'
   import { formatStartTime, parseTimeOfDay } from './schedule'
   import { strings } from './strings'
   import { createUndoTracker } from './undoTracker.svelte'
@@ -22,6 +23,9 @@
   } = $props()
 
   let dragging = $state(false)
+
+  let printFit = $state<PrintFit>(PRINTS_AS_IS)
+  const fitNotice = $derived(printFitNotice(printFit))
 
   const startTimeIsValid = $derived(parseTimeOfDay(plan.startTime) !== null)
 
@@ -137,6 +141,15 @@
     {strings.saved}
   </span>
 
+  <!-- What printing had to give up to hold the table on an A4 page. Muted, not
+       red: nothing here went wrong, and red belongs to errors. -->
+  {#if fitNotice !== ''}
+    <span class="fit">
+      <Icon name="warning" size={16} />
+      {fitNotice}
+    </span>
+  {/if}
+
   <button type="button" class="primary" onclick={() => window.print()}>
     <Icon name="print" />
     {strings.print}
@@ -194,7 +207,12 @@
     <HeaderFieldsEditor bind:plan />
   </header>
 
-  <ScheduleTable bind:plan {lists} ondragstatechange={(active) => (dragging = active)} />
+  <ScheduleTable
+    bind:plan
+    {lists}
+    ondragstatechange={(active) => (dragging = active)}
+    onprintfit={(fit) => (printFit = fit)}
+  />
 </article>
 
 <style>
@@ -242,6 +260,15 @@
 
   .saved.visible {
     opacity: 1;
+  }
+
+  .fit {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: var(--space-3);
+    font-size: 0.85rem;
+    color: var(--ink-muted);
   }
 
   /* The sheet is the paper: ruled 5mm like a school exercise book, which is

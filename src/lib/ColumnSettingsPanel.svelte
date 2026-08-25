@@ -5,6 +5,7 @@
   import PrintMark from './PrintMark.svelte'
   import { findDurationColumn, removeColumn } from './document'
   import { openLists } from './listsDialog.svelte'
+  import { TIME_SLOT } from './slots'
   import { strings } from './strings'
   import type { Column, ColumnType, ScheduleDocument, SelectList } from './types'
 
@@ -15,6 +16,7 @@
     timeGroup,
     open,
     lists,
+    autoHidden,
     ontoggle,
     onclosed,
     ongrab,
@@ -27,6 +29,8 @@
     timeGroup: boolean
     open: boolean
     lists: SelectList[]
+    /** Slots the page took away, because the table was too wide to print whole. */
+    autoHidden: readonly string[]
     ontoggle: () => void
     onclosed: () => void
     ongrab: () => void
@@ -35,6 +39,11 @@
   const TYPES: ColumnType[] = ['text', 'select', 'duration']
 
   const durationColumn = $derived(findDurationColumn(plan.columns))
+
+  /* The Uhrzeit cell speaks for itself here; the panel's own column is the
+     duration column beside it. */
+  const ownDropped = $derived(autoHidden.includes(timeGroup ? TIME_SLOT.id : column.id))
+  const columnDropped = $derived(autoHidden.includes(column.id))
 
   function canBecome(type: ColumnType): boolean {
     if (type !== 'duration') return true
@@ -105,7 +114,7 @@
     >{label}{#if label.trim() === ''}<span class="placeholder no-print"
         >{strings.columnTitleLabel}</span
       >{/if}</button
-  ><PrintMark hidden={timeGroup ? plan.hideTimeInPrint : column.hideInPrint} />
+  ><PrintMark hidden={timeGroup ? plan.hideTimeInPrint : column.hideInPrint} auto={ownDropped} />
 
   {#if open}
     <span class="panel no-print" popover={TOP_LAYER ? 'manual' : null} use:placeUnderName>
@@ -129,6 +138,9 @@
           />
           {strings.printTime}
         </label>
+        {#if ownDropped}
+          <span class="hint">{strings.autoHiddenHint}</span>
+        {/if}
 
         <label for="column-title-{column.id}">{strings.durationColumnTitleLabel}</label>
         <input
@@ -145,6 +157,9 @@
           />
           {strings.printDuration}
         </label>
+        {#if columnDropped}
+          <span class="hint">{strings.autoHiddenHint}</span>
+        {/if}
       {:else}
         <label for="column-title-{column.id}">{strings.columnTitleLabel}</label>
         <input
@@ -201,6 +216,9 @@
           />
           {strings.printColumn}
         </label>
+        {#if columnDropped}
+          <span class="hint">{strings.autoHiddenHint}</span>
+        {/if}
       {/if}
 
       <button type="button" class="remove" onclick={() => (removing = true)}>

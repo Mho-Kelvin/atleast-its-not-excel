@@ -1,14 +1,23 @@
 <script lang="ts">
   import { strings } from './strings'
 
-  let { hidden }: { hidden: boolean | undefined } = $props()
+  let {
+    hidden,
+    auto = false,
+  }: {
+    hidden: boolean | undefined
+    /** Taken away by the page rather than switched off by hand, which reads differently. */
+    auto?: boolean
+  } = $props()
+
+  const label = $derived(auto ? strings.autoHidden : strings.notPrinted)
 </script>
 
-{#if hidden === true}<span
+{#if hidden === true || auto}<span
     class="print-mark no-print"
     role="img"
-    aria-label={strings.notPrinted}
-    title={strings.notPrinted}>⊘</span
+    aria-label={label}
+    title={label}>⊘</span
   >{/if}
 
 <style>

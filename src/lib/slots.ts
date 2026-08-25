@@ -1,5 +1,5 @@
 import { SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action'
-import type { Column, Row } from './types'
+import type { Column, Row, ScheduleDocument } from './types'
 
 export const HANDLE_SLOT = { id: '__handle' }
 export const TIME_SLOT = { id: '__time' }
@@ -37,6 +37,40 @@ export function headerSlots(columns: readonly Column[]): HeaderSlot[] {
   }
   slots.push(TRAILING_SLOT)
   return slots
+}
+
+/**
+ * The slots that reach the paper, in order. The handle and the trailing cell
+ * carry controls and are `.no-print`; the placeholder is not a cell at all. A
+ * slot the user switched off is still here: it keeps its place in the table so
+ * the two orders can be compared position by position.
+ */
+export function printableSlots(slots: readonly HeaderSlot[]): HeaderSlot[] {
+  return slots.filter(
+    (slot) =>
+      slot.id !== HANDLE_SLOT.id && slot.id !== TRAILING_SLOT.id && !isDragPlaceholder(slot),
+  )
+}
+
+/**
+ * The printed cells by id, in order, and which of those positions the fitting
+ * may give up. A cell the user switched off keeps its position, so the ids line
+ * up with the cells of the table, but it is not on offer: it costs no width.
+ */
+export function printableCells(slots: readonly HeaderSlot[], plan: ScheduleDocument) {
+  const ids: string[] = []
+  const droppable: number[] = []
+
+  for (const slot of printableSlots(slots)) {
+    const byHand =
+      slot.id === TIME_SLOT.id
+        ? plan.hideTimeInPrint === true
+        : (slot as Column).hideInPrint === true
+    if (!byHand) droppable.push(ids.length)
+    ids.push(slot.id)
+  }
+
+  return { ids, droppable }
 }
 
 export function rowsFromDndItems(items: readonly Row[]): Row[] {

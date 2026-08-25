@@ -22,6 +22,7 @@
     startTime,
     draft,
     hideTimeInPrint,
+    autoHidden,
     isCustomCell,
     onchoose,
     onleavecustom,
@@ -34,6 +35,8 @@
     /** The last row, still empty: an offer to type, so it carries no delete. */
     draft: boolean
     hideTimeInPrint: boolean | undefined
+    /** Slots the page took away, because the table was too wide to print whole. */
+    autoHidden: readonly string[]
     isCustomCell: (row: Row, column: Column, value: string) => boolean
     onchoose: (row: Row, column: Column, chosen: string) => void
     onleavecustom: (row: Row, column: Column) => void
@@ -80,7 +83,11 @@
         </span>
       </td>
     {:else if slot.id === TIME_SLOT.id}
-      <td class="time-column group-start" class:print-hidden={hideTimeInPrint}>
+      <td
+        class="time-column group-start"
+        class:print-hidden={hideTimeInPrint}
+        class:print-auto-hidden={autoHidden.includes(TIME_SLOT.id)}
+      >
         {startTime === undefined ? '' : formatTimeOfDay(startTime)}
       </td>
     {:else if slot.id === TRAILING_SLOT.id}
@@ -103,6 +110,7 @@
         data-column-type={column.type}
         class:group-end={column.type === 'duration'}
         class:print-hidden={column.hideInPrint}
+        class:print-auto-hidden={autoHidden.includes(column.id)}
         onclick={focusField}
       >
         {#if column.type === 'select' && !isCustomCell(row, column, row.cells[column.id] ?? '')}

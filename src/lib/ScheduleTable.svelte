@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { SvelteSet } from 'svelte/reactivity'
   import { dragHandleZone, type DndEvent } from 'svelte-dnd-action'
   import ColumnSettingsPanel from './ColumnSettingsPanel.svelte'
   import Icon from './Icon.svelte'
   import PrintMark from './PrintMark.svelte'
   import TableRow from './TableRow.svelte'
+  import { createCustomCells } from './customCells.svelte'
   import { addColumn, createColumn, findDurationColumn, isRowEmpty } from './document'
   import {
     columnAnnouncement,
@@ -13,18 +13,21 @@
     rowAnnouncement,
   } from './dragging'
   import { parseDuration } from './duration'
-  import { CUSTOM_VALUE, listValues } from './lists'
+  import type { PrintFit } from './printFit'
   import { computeStartTimes, parseTimeOfDay } from './schedule'
+  import { createScrollEdges } from './scrollEdges.svelte'
   import {
     columnsFromDndItems,
     headerSlots,
     isDragPlaceholder,
+    printableCells,
     rowsFromDndItems,
     HANDLE_SLOT,
     TIME_SLOT,
     TRAILING_SLOT,
     type HeaderSlot,
   } from './slots'
+  import { createTableFit } from './tableFit.svelte'
   import { dragAnnouncements, strings } from './strings'
   import type { Column, Row, ScheduleDocument, SelectList } from './types'
 
@@ -32,10 +35,12 @@
     plan = $bindable(),
     lists,
     ondragstatechange,
+    onprintfit,
   }: {
     plan: ScheduleDocument
     lists: SelectList[]
     ondragstatechange?: (dragging: boolean) => void
+    onprintfit?: (fit: PrintFit) => void
   } = $props()
 
   const durationColumn = $derived(findDurationColumn(plan.columns))
@@ -49,31 +54,7 @@
     return computeStartTimes(documentStart, durations)
   })
 
-  /** Cells the user switched to free text. A value off the list counts too, so a
-      document written before the list changed still shows what it holds. */
-  const customCells = new SvelteSet<string>()
-
-  function cellKey(row: Row, column: Column): string {
-    return `${row.id}:${column.id}`
-  }
-
-  function isCustomCell(row: Row, column: Column, value: string): boolean {
-    if (customCells.has(cellKey(row, column))) return true
-    return value !== '' && !listValues(lists, column.listId).includes(value)
-  }
-
-  function chooseValue(row: Row, column: Column, chosen: string): void {
-    if (chosen === CUSTOM_VALUE) {
-      customCells.add(cellKey(row, column))
-      row.cells[column.id] = ''
-      return
-    }
-    row.cells[column.id] = chosen
-  }
-
-  function leaveCustom(row: Row, column: Column): void {
-    if ((row.cells[column.id] ?? '') === '') customCells.delete(cellKey(row, column))
-  }
+  const customCells = createCustomCells(() => lists)
 
   // headerSlots always parks the start-time cell next to the duration column,
   // which would snap it back on every frame of a drag that grabbed it. While a
@@ -92,27 +73,18 @@
     ondragstatechange?.(active)
   }
 
-  let scroller: HTMLDivElement
-  let moreLeft = $state(false)
-  let moreRight = $state(false)
+  const edges = createScrollEdges(() => `${plan.columns.length}:${plan.rows.length}`)
 
-  /* The usual pure-CSS scroll shadows sit in the container's background, where
-     the table's opaque cells cover them, so the edges are measured instead. */
-  function measureEdges(): void {
-    if (!scroller) return
-    const furthest = scroller.scrollWidth - scroller.clientWidth
-    moreLeft = scroller.scrollLeft > 1
-    moreRight = scroller.scrollLeft < furthest - 1
-  }
+  let table = $state<HTMLTableElement>()
+  const fit = createTableFit(
+    () => table,
+    () => plan.updatedAt,
+    () => printableCells(slots, plan),
+  )
+  const autoHidden = $derived(fit.hidden)
 
-  function startAtLeftEdge(node: HTMLDivElement): void {
-    node.scrollLeft = 0
-  }
-  // Read on purpose: adding a column or a row changes how far the table reaches
-  // without the container ever resizing.
   $effect(() => {
-    const shape = `${plan.columns.length}:${plan.rows.length}`
-    if (shape !== '') measureEdges()
+    onprintfit?.(fit.value)
   })
 
   function announce(text: string | null): void {
@@ -169,7 +141,7 @@
   }
 </script>
 
-<svelte:window onkeydown={onWindowKeydown} onresize={measureEdges} />
+<svelte:window onkeydown={onWindowKeydown} onresize={edges.measure} />
 <svelte:document onpointerdown={onDocumentPointerDown} />
 
 <span class="announcer no-print" aria-live="polite">{announcement}</span>
@@ -177,9 +149,9 @@
 
 <!-- The table scrolls inside its own box on a narrow screen; the page itself
      never does. The edges fade while there is more table on that side. -->
-<div class="frame" class:more-left={moreLeft} class:more-right={moreRight}>
-  <div class="scroller" bind:this={scroller} use:startAtLeftEdge onscroll={measureEdges}>
-    <table>
+<div class="frame" class:more-left={edges.left} class:more-right={edges.right}>
+  <div class="scroller" use:edges.watch onscroll={edges.measure}>
+    <table bind:this={table} style="--print-scale: {fit.value.scale}">
       <thead>
         <tr
           bind:this={headerRow}
@@ -198,7 +170,11 @@
             {:else if isDragPlaceholder(slot)}
               <th class="no-print"></th>
             {:else if slot.id === TIME_SLOT.id}
-              <th class="time-column group-start" class:print-hidden={plan.hideTimeInPrint}>
+              <th
+                class="time-column group-start"
+                class:print-hidden={plan.hideTimeInPrint}
+                class:print-auto-hidden={autoHidden.includes(TIME_SLOT.id)}
+              >
                 {@render settings(durationColumn!, timeTitle, true)}
               </th>
             {:else if slot.id === TRAILING_SLOT.id}
@@ -215,12 +191,20 @@
               </th>
             {:else if asColumn(slot).type === 'duration'}
               {@const column = asColumn(slot)}
-              <th class="group-end" class:print-hidden={column.hideInPrint}
-                >{column.title}<PrintMark hidden={column.hideInPrint} /></th
+              <th
+                class="group-end"
+                class:print-hidden={column.hideInPrint}
+                class:print-auto-hidden={autoHidden.includes(column.id)}
+                >{column.title}<PrintMark
+                  hidden={column.hideInPrint}
+                  auto={autoHidden.includes(column.id)}
+                /></th
               >
             {:else}
               {@const column = asColumn(slot)}
-              <th class:print-hidden={column.hideInPrint}
+              <th
+                class:print-hidden={column.hideInPrint}
+                class:print-auto-hidden={autoHidden.includes(column.id)}
                 >{@render settings(column, column.title, false)}</th
               >
             {/if}
@@ -248,9 +232,10 @@
               startTime={startTimes[rowIndex]}
               draft={rowIndex === plan.rows.length - 1 && isRowEmpty(row)}
               hideTimeInPrint={plan.hideTimeInPrint}
-              {isCustomCell}
-              onchoose={chooseValue}
-              onleavecustom={leaveCustom}
+              {autoHidden}
+              isCustomCell={customCells.is}
+              onchoose={customCells.choose}
+              onleavecustom={customCells.leave}
               onremove={() => plan.rows.splice(rowIndex, 1)}
             />
           {/if}
@@ -267,6 +252,7 @@
     {label}
     {timeGroup}
     {lists}
+    {autoHidden}
     open={openColumnId === column.id}
     ontoggle={() => (openColumnId = openColumnId === column.id ? null : column.id)}
     onclosed={() => (openColumnId = null)}
@@ -384,6 +370,14 @@
   }
 
   @media print {
+    /* Set from the measured fit. Zoom lays the table out again rather than just
+       drawing it smaller, so the page breaks and the repeating header still land
+       where they should, and the table goes on filling the line by itself: a
+       width stretched to match would push it back off the page. */
+    table {
+      zoom: var(--print-scale, 1);
+    }
+
     .scroller {
       overflow-x: visible;
     }

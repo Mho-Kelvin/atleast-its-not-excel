@@ -43,6 +43,10 @@ export const strings = {
   printTime: 'Uhrzeit drucken',
   printDuration: 'Dauer drucken',
   notPrinted: 'Wird nicht gedruckt',
+  autoHidden: 'Passt nicht auf A4',
+  autoHiddenHint: 'Passt nicht auf A4, wird ausgeblendet.',
+  printScaled: (percent: number) => `Auf ${percent}% verkleinert`,
+  printDoesNotFit: 'Passt nicht auf A4',
   confirmDeleteColumn: 'Diese Spalte mit allen Inhalten löschen?',
 
   lists: 'Auswahllisten',
@@ -78,6 +82,7 @@ export const strings = {
 export const counts = {
   documentShape: (rows: number, columns: number) =>
     `${rows} ${rows === 1 ? 'Zeile' : 'Zeilen'} · ${columns} ${columns === 1 ? 'Spalte' : 'Spalten'}`,
+  hiddenColumns: (count: number) => `${count} ${count === 1 ? 'Spalte' : 'Spalten'} ausgeblendet`,
 }
 
 /**

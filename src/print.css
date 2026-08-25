@@ -12,6 +12,35 @@
   margin: 0;
 }
 
+/* The copy of the table that gets measured against the width of a page. It stays
+   in the live document, so it already carries the components' own rules, which
+   is what governs the cells in print too: a scoped `td.svelte-hash` outranks the
+   bare `td` a global stylesheet can write. Only the overrides the components
+   declare for print have to be repeated here, and they need !important to reach
+   past that same scoping. */
+.print-probe {
+  position: fixed;
+  top: 0;
+  left: -300vw;
+  width: 186mm; /* A4 portrait minus the body's own margin below. */
+  visibility: hidden;
+  font-size: 10pt;
+}
+
+.print-probe td {
+  min-width: 0 !important;
+}
+
+.print-probe .draft,
+.print-probe .print-hidden {
+  display: none !important;
+}
+
+/* Stands in for a dropdown, which prints its value on one line however long. */
+.print-probe .probe-value {
+  white-space: pre;
+}
+
 @media print {
   /* Paper takes the same components with a different palette: black on white
      for a school copier, no ruling, no tints. Redefining the tokens beats
@@ -49,22 +78,24 @@
     display: none !important;
   }
 
-  /* A column the user switched off. The cell stays in the DOM: both drag zones
+  /* A column the user switched off, and one the page took away because the table
+     was too wide for it. The cell stays in the DOM either way: both drag zones
      map one DOM child per item, and a missing cell would shift every index. */
-  .print-hidden {
+  .print-hidden,
+  .print-auto-hidden {
     display: none !important;
   }
 
   /* The dashed divider only makes sense while both halves of the time group
      print. When one is switched off, the survivor's edge goes back to normal.
      display:none leaves the cell in the tree, so these still match. */
-  .print-hidden + th,
-  .print-hidden + td {
+  :is(.print-hidden, .print-auto-hidden) + th,
+  :is(.print-hidden, .print-auto-hidden) + td {
     border-left: 0.5pt solid #000 !important;
   }
 
-  th:has(+ .print-hidden),
-  td:has(+ .print-hidden) {
+  th:has(+ :is(.print-hidden, .print-auto-hidden)),
+  td:has(+ :is(.print-hidden, .print-auto-hidden)) {
     border-right: 0.5pt solid #000 !important;
   }
 
