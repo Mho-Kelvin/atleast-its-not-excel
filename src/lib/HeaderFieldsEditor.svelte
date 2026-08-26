@@ -58,10 +58,11 @@
     padding: 0;
   }
 
+  /* Opaque, so the ruling behind the sheet does not read through the writing. */
   .label,
   .value {
-    border-color: transparent;
-    background: none;
+    border-color: var(--rule);
+    background: #fff;
   }
 
   .label {
@@ -76,13 +77,7 @@
 
   .label:hover,
   .value:hover {
-    border-color: var(--rule);
-    background: #fff;
-  }
-
-  .label:focus,
-  .value:focus {
-    background: #fff;
+    border-color: var(--accent);
   }
 
   /* An auto track soaks up the row's free space, which made the button as wide
