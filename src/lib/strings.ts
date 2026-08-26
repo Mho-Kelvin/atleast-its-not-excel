@@ -29,6 +29,16 @@ export const strings = {
   lastChanged: 'Zuletzt geändert',
   confirmDeleteDocument: 'Dieses Dokument endgültig löschen?',
 
+  templates: 'Vorlagen',
+  templateBadge: 'Vorlage',
+  templateTitlePlaceholder: 'Vorlagenname',
+  saveAsTemplate: 'Als Vorlage speichern',
+  deleteTemplate: 'Vorlage löschen',
+  confirmDeleteTemplate: 'Diese Vorlage endgültig löschen?',
+  chooseTemplate: 'Womit anfangen?',
+  blankDocument: 'Leeres Dokument',
+  noTemplates: 'Noch keine Vorlagen.',
+
   addColumn: 'Spalte hinzufügen',
   removeColumn: 'Spalte löschen',
   columnSettings: 'Spalte bearbeiten',

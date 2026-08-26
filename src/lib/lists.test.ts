@@ -31,6 +31,22 @@ describe('removeList', () => {
     expect(column.listId).toBeUndefined()
   })
 
+  it('clears the list off a template too, not just the documents', () => {
+    const store = emptyStore()
+    const list = createList('Räume')
+    store.lists.push(list)
+
+    const template = createDocument('Vorlage')
+    const column = createColumn('Ort', 'select')
+    column.listId = list.id
+    template.columns.push(column)
+    store.templates.push(template)
+
+    removeList(store, list.id)
+
+    expect(column.listId).toBeUndefined()
+  })
+
   it('leaves columns pointing at other lists alone', () => {
     const store = emptyStore()
     const kept = createList('Räume')

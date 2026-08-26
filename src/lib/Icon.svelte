@@ -13,6 +13,7 @@
     copy: 'M8 8h11v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zM16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3',
     trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3',
     settings: 'M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M8 15v4',
+    template: 'M6 3h12v18l-6-4-6 4zM9 8h6',
     close: 'M6 6l12 12M18 6L6 18',
     lists: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
     check: 'M4 13l5 5L20 6',

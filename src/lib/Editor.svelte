@@ -3,9 +3,8 @@
   import Icon from './Icon.svelte'
   import ScheduleTable from './ScheduleTable.svelte'
   import { ensureDrafts } from './document'
-  import { CUSTOM_VALUE, startTimeOptions } from './lists'
+  import StartTimeField from './StartTimeField.svelte'
   import { printFitNotice, PRINTS_AS_IS, type PrintFit } from './printFit'
-  import { formatStartTime, parseTimeOfDay } from './schedule'
   import { strings } from './strings'
   import { createUndoTracker } from './undoTracker.svelte'
   import type { ScheduleDocument, SelectList, StartTime } from './types'
@@ -14,56 +13,27 @@
     plan = $bindable(),
     lists,
     startTimes,
+    isTemplate = false,
     onback,
+    onsaveastemplate,
   }: {
     plan: ScheduleDocument
     lists: SelectList[]
     startTimes: StartTime[]
+    /** A template edits exactly like a document; only the wording differs. */
+    isTemplate?: boolean
     onback: () => void
+    onsaveastemplate: () => void
   } = $props()
+
+  const titlePlaceholder = $derived(
+    isTemplate ? strings.templateTitlePlaceholder : strings.documentTitlePlaceholder,
+  )
 
   let dragging = $state(false)
 
   let printFit = $state<PrintFit>(PRINTS_AS_IS)
   const fitNotice = $derived(printFitNotice(printFit))
-
-  const startTimeIsValid = $derived(parseTimeOfDay(plan.startTime) !== null)
-
-  const startTimeChoices = $derived(startTimeOptions(startTimes))
-
-  let customStartTime = $state(false)
-  const startTimeIsCustom = $derived(
-    customStartTime ||
-      (plan.startTime !== '' && !startTimeChoices.some((entry) => entry.time === plan.startTime)),
-  )
-
-  // Two entries may share a time, so the document remembers which one was picked.
-  // An entry that has since been deleted falls back to the first on that time.
-  const chosenStartTime = $derived(
-    startTimeChoices.find(
-      (entry) => entry.id === plan.startTimeId && entry.time === plan.startTime,
-    ) ?? startTimeChoices.find((entry) => entry.time === plan.startTime),
-  )
-
-  function chooseStartTime(chosen: string): void {
-    if (chosen === CUSTOM_VALUE) {
-      customStartTime = true
-      plan.startTime = ''
-      plan.startTimeId = undefined
-      return
-    }
-    const entry = startTimeChoices.find((option) => option.id === chosen)
-    plan.startTime = entry?.time ?? ''
-    plan.startTimeId = entry?.id
-  }
-
-  function leaveCustomStartTime(): void {
-    if (plan.startTime === '') customStartTime = false
-  }
-
-  function focusIfCustom(node: HTMLInputElement): void {
-    if (customStartTime) node.focus()
-  }
 
   // Declared before the tracker on purpose: the draft row it appends belongs to
   // the same change, so one keystroke still costs one undo step. Held off during
@@ -115,6 +85,10 @@
     {strings.back}
   </button>
 
+  {#if isTemplate}
+    <span class="badge">{strings.templateBadge}</span>
+  {/if}
+
   <span class="steps">
     <button
       type="button"
@@ -152,10 +126,23 @@
     </span>
   {/if}
 
-  <button type="button" class="primary" onclick={() => window.print()}>
-    <Icon name="print" />
-    {strings.print}
-  </button>
+  <!-- One group, so the print button keeps the right edge whether or not the
+       template button is beside it. -->
+  <span class="end">
+    <!-- Missing while a template is open: the badge already says so, and the
+         button would only make a second copy of it. -->
+    {#if !isTemplate}
+      <button type="button" onclick={onsaveastemplate}>
+        <Icon name="template" />
+        {strings.saveAsTemplate}
+      </button>
+    {/if}
+
+    <button type="button" class="primary" onclick={() => window.print()}>
+      <Icon name="print" />
+      {strings.print}
+    </button>
+  </span>
 </div>
 
 <article class="sheet">
@@ -167,53 +154,11 @@
       class="title no-print"
       aria-label={strings.documentTitleLabel}
       bind:value={plan.title}
-      placeholder={strings.documentTitlePlaceholder}
+      placeholder={titlePlaceholder}
     />
-    <h1 class="print-only">{plan.title || strings.documentTitlePlaceholder}</h1>
+    <h1 class="print-only">{plan.title || titlePlaceholder}</h1>
 
-    <!-- Explicit for/id, not a wrapping <label>: a wrapped select pulls its own
-         option text into its accessible name. -->
-    <p class="start" class:print-hidden={plan.hideStartTimeInPrint}>
-      <span class="clock no-print"><Icon name="clock" size={16} /></span>
-      <label for="start-time">{strings.startTimeLabel}</label>
-      {#if startTimeChoices.length > 0 && !startTimeIsCustom}
-        <select
-          id="start-time"
-          value={chosenStartTime?.id ?? ''}
-          onchange={(event) => chooseStartTime(event.currentTarget.value)}
-        >
-          <option value=""></option>
-          {#each startTimeChoices as entry (entry.id)}
-            <option value={entry.id}>{formatStartTime(entry)}</option>
-          {/each}
-          <option value={CUSTOM_VALUE}>{strings.customValue}</option>
-        </select>
-      {:else}
-        <!-- A time input, so an unparseable time never reaches the document. -->
-        <input
-          id="start-time"
-          type="time"
-          use:focusIfCustom
-          bind:value={plan.startTime}
-          onblur={leaveCustomStartTime}
-        />
-      {/if}
-      {#if !startTimeIsValid}
-        <span class="no-print warning">
-          <Icon name="warning" size={16} />
-          {strings.startTimeInvalid}
-        </span>
-      {/if}
-
-      <label class="check no-print">
-        <input
-          type="checkbox"
-          checked={plan.hideStartTimeInPrint !== true}
-          onchange={(event) => (plan.hideStartTimeInPrint = !event.currentTarget.checked)}
-        />
-        {strings.printStartTime}
-      </label>
-    </p>
+    <StartTimeField bind:plan {startTimes} />
 
     <HeaderFieldsEditor bind:plan ondragstatechange={(active) => (dragging = active)} />
   </header>
@@ -244,8 +189,21 @@
     color: var(--ink-muted);
   }
 
-  .primary {
+  .end {
+    display: flex;
+    gap: var(--space-2);
     margin-left: auto;
+  }
+
+  .badge {
+    padding: 0.1rem var(--space-2);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--accent);
+  }
+
+  .primary {
     border-color: var(--accent);
     background: var(--accent);
     color: #fff;
@@ -329,41 +287,6 @@
     display: none;
   }
 
-  .start {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    height: calc(var(--square) * 2);
-    margin: 0 0 var(--square);
-    color: var(--ink-muted);
-    font-size: 0.9rem;
-  }
-
-  .clock {
-    display: flex;
-    color: var(--ink-faint);
-  }
-
-  .start select,
-  .start input {
-    font-variant-numeric: tabular-nums;
-  }
-
-  .warning {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    color: var(--red);
-  }
-
-  .check {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    margin-left: var(--space-3);
-    color: var(--ink-faint);
-  }
-
   @media print {
     .print-only {
       display: block;
@@ -383,15 +306,8 @@
       margin-bottom: 4mm;
     }
 
-    .title,
-    .start {
+    .title {
       height: auto;
-    }
-
-    .start {
-      margin: 1mm 0 3mm;
-      font-size: inherit;
-      color: inherit;
     }
   }
 </style>

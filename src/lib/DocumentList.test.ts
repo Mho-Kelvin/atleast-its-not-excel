@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import DocumentList from './DocumentList.svelte'
 import { createDocument, ensureDrafts } from './document'
+import type { ScheduleDocument } from './types'
 
 function documentNamed(title: string, updatedAt: number) {
   const entry = createDocument(title)
@@ -9,15 +10,21 @@ function documentNamed(title: string, updatedAt: number) {
   return entry
 }
 
-function renderList(documents = [documentNamed('Ablauf', 1000)]) {
+function renderList(
+  documents = [documentNamed('Ablauf', 1000)],
+  templates: ScheduleDocument[] = [],
+) {
   const handlers = {
     onopen: vi.fn(),
+    onopentemplate: vi.fn(),
     oncreate: vi.fn(),
     onduplicate: vi.fn(),
+    onsaveastemplate: vi.fn(),
     ondelete: vi.fn(),
+    ondeletetemplate: vi.fn(),
     onmanagelists: vi.fn(),
   }
-  render(DocumentList, { props: { documents, ...handlers } })
+  render(DocumentList, { props: { documents, templates, ...handlers } })
   return handlers
 }
 
@@ -85,5 +92,70 @@ describe('DocumentList', () => {
   it('falls back to the placeholder for an untitled document', () => {
     renderList([documentNamed('', 1000)])
     expect(screen.getByRole('button', { name: 'Ohne Titel' })).toBeTruthy()
+  })
+})
+
+describe('templates', () => {
+  it('has no section at all until one is saved', () => {
+    renderList()
+    expect(screen.queryByText('Vorlagen')).toBeNull()
+  })
+
+  it('lists them under their own heading, newest first', () => {
+    renderList(
+      [documentNamed('Ablauf', 1000)],
+      [documentNamed('Ältere Vorlage', 1000), documentNamed('Neuere Vorlage', 2000)],
+    )
+
+    expect(screen.getByText('Vorlagen')).toBeTruthy()
+    const titles = screen
+      .getAllByRole('button', { name: /Vorlage$/ })
+      .map((card) => document.getElementById(card.getAttribute('aria-labelledby')!)?.textContent)
+    expect(titles.map((title) => title?.trim())).toEqual(['Neuere Vorlage', 'Ältere Vorlage'])
+  })
+
+  it('opens a template in the editor rather than as a document', async () => {
+    const template = documentNamed('Standard', 1000)
+    const handlers = renderList([documentNamed('Ablauf', 1000)], [template])
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Standard' }))
+
+    expect(handlers.onopentemplate).toHaveBeenCalledWith(template.id)
+    expect(handlers.onopen).not.toHaveBeenCalled()
+  })
+
+  it('saves a document as a template from its card', async () => {
+    const entry = documentNamed('Ablauf', 1000)
+    const handlers = renderList([entry])
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Als Vorlage speichern' }))
+
+    expect(handlers.onsaveastemplate).toHaveBeenCalledWith(entry.id)
+  })
+
+  it('offers neither duplicating nor saving on a template card', () => {
+    renderList([], [documentNamed('Standard', 1000)])
+
+    expect(screen.queryByRole('button', { name: 'Duplizieren' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Als Vorlage speichern' })).toBeNull()
+  })
+
+  it('deletes a template only after its own confirmation is accepted', async () => {
+    const template = documentNamed('Standard', 1000)
+    const handlers = renderList([documentNamed('Ablauf', 1000)], [template])
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Vorlage löschen' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('Diese Vorlage endgültig löschen?')).toBeTruthy()
+
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'Vorlage löschen' }))
+
+    expect(handlers.ondeletetemplate).toHaveBeenCalledWith(template.id)
+    expect(handlers.ondelete).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the template placeholder for an unnamed one', () => {
+    renderList([], [documentNamed('', 1000)])
+    expect(screen.getByRole('button', { name: 'Vorlagenname' })).toBeTruthy()
   })
 })

@@ -8,26 +8,37 @@
 
   let {
     documents,
+    templates,
     onopen,
+    onopentemplate,
     oncreate,
     onduplicate,
+    onsaveastemplate,
     ondelete,
+    ondeletetemplate,
     onmanagelists,
   }: {
     documents: ScheduleDocument[]
+    templates: ScheduleDocument[]
     onopen: (id: string) => void
+    onopentemplate: (id: string) => void
     oncreate: () => void
     onduplicate: (id: string) => void
+    onsaveastemplate: (id: string) => void
     ondelete: (id: string) => void
+    ondeletetemplate: (id: string) => void
     onmanagelists: () => void
   } = $props()
 
   const sorted = $derived([...documents].sort((a, b) => b.updatedAt - a.updatedAt))
+  const sortedTemplates = $derived([...templates].sort((a, b) => b.updatedAt - a.updatedAt))
 
-  let removing = $state<ScheduleDocument | null>(null)
+  let removing = $state<{ entry: ScheduleDocument; template: boolean } | null>(null)
 
   function remove(): void {
-    if (removing) ondelete(removing.id)
+    if (!removing) return
+    if (removing.template) ondeletetemplate(removing.entry.id)
+    else ondelete(removing.entry.id)
     removing = null
   }
 
@@ -59,58 +70,85 @@
   {:else}
     <ul>
       {#each sorted as entry (entry.id)}
-        <li>
-          <!-- Named after the title alone: content naming would fold the date
-               and the shape into the button's name. -->
-          <button
-            type="button"
-            class="open"
-            aria-labelledby="card-title-{entry.id}"
-            onclick={() => onopen(entry.id)}
-          >
-            <span
-              class="title"
-              id="card-title-{entry.id}"
-              class:untitled={entry.title.trim() === ''}
-            >
-              {entry.title || strings.documentTitlePlaceholder}
-            </span>
-            <span class="changed">{formatChanged(entry.updatedAt)}</span>
-            <span class="shape">{shape(entry)}</span>
-          </button>
-
-          <!-- Outside the card's own button: a button inside a button is not a
-               thing the browser will render. -->
-          <div class="card-actions">
-            <button
-              type="button"
-              class="icon"
-              title={strings.duplicateDocument}
-              aria-label={strings.duplicateDocument}
-              onclick={() => onduplicate(entry.id)}
-            >
-              <Icon name="copy" size={18} />
-            </button>
-            <button
-              type="button"
-              class="icon danger"
-              title={strings.deleteDocument}
-              aria-label={strings.deleteDocument}
-              onclick={() => (removing = entry)}
-            >
-              <Icon name="trash" size={18} />
-            </button>
-          </div>
-        </li>
+        {@render card(entry, false)}
       {/each}
     </ul>
   {/if}
 </section>
 
+<!-- Only there once something is in it: a template is saved from a document, so
+     an empty section would be an offer nobody can take up. -->
+{#if sortedTemplates.length > 0}
+  <!-- Named, so it is a landmark of its own: the cards in it read the same as
+       the documents above and only the section tells them apart. -->
+  <section class="templates" aria-labelledby="templates-heading">
+    <h2 id="templates-heading">{strings.templates}</h2>
+    <ul>
+      {#each sortedTemplates as entry (entry.id)}
+        {@render card(entry, true)}
+      {/each}
+    </ul>
+  </section>
+{/if}
+
+{#snippet card(entry: ScheduleDocument, template: boolean)}
+  <li>
+    <!-- Named after the title alone: content naming would fold the date
+         and the shape into the button's name. -->
+    <button
+      type="button"
+      class="open"
+      aria-labelledby="card-title-{entry.id}"
+      onclick={() => (template ? onopentemplate(entry.id) : onopen(entry.id))}
+    >
+      <span class="title" id="card-title-{entry.id}" class:untitled={entry.title.trim() === ''}>
+        {entry.title ||
+          (template ? strings.templateTitlePlaceholder : strings.documentTitlePlaceholder)}
+      </span>
+      <span class="changed">{formatChanged(entry.updatedAt)}</span>
+      <span class="shape">{shape(entry)}</span>
+    </button>
+
+    <!-- Outside the card's own button: a button inside a button is not a
+         thing the browser will render. -->
+    <div class="card-actions">
+      {#if !template}
+        <button
+          type="button"
+          class="icon"
+          title={strings.duplicateDocument}
+          aria-label={strings.duplicateDocument}
+          onclick={() => onduplicate(entry.id)}
+        >
+          <Icon name="copy" size={18} />
+        </button>
+        <button
+          type="button"
+          class="icon"
+          title={strings.saveAsTemplate}
+          aria-label={strings.saveAsTemplate}
+          onclick={() => onsaveastemplate(entry.id)}
+        >
+          <Icon name="template" size={18} />
+        </button>
+      {/if}
+      <button
+        type="button"
+        class="icon danger"
+        title={template ? strings.deleteTemplate : strings.deleteDocument}
+        aria-label={template ? strings.deleteTemplate : strings.deleteDocument}
+        onclick={() => (removing = { entry, template })}
+      >
+        <Icon name="trash" size={18} />
+      </button>
+    </div>
+  </li>
+{/snippet}
+
 <ConfirmDialog
   open={removing !== null}
-  message={strings.confirmDeleteDocument}
-  confirmLabel={strings.deleteDocument}
+  message={removing?.template ? strings.confirmDeleteTemplate : strings.confirmDeleteDocument}
+  confirmLabel={removing?.template ? strings.deleteTemplate : strings.deleteDocument}
   onconfirm={remove}
   oncancel={() => (removing = null)}
 />
@@ -127,6 +165,15 @@
 
   h1 {
     margin: 0;
+  }
+
+  .templates {
+    margin-top: var(--space-6);
+  }
+
+  h2 {
+    margin: 0 0 var(--space-4);
+    font-size: 1.1rem;
   }
 
   .actions {

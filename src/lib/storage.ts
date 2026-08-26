@@ -5,7 +5,7 @@ const STORAGE_KEY = 'tobias-tool/v1'
 const BROKEN_KEY = 'tobias-tool/v1-broken'
 
 export function emptyStore(): Store {
-  return { documents: [], lists: [], startTimes: [] }
+  return { documents: [], templates: [], lists: [], startTimes: [] }
 }
 
 /**
@@ -30,7 +30,10 @@ export function loadStore(): Store {
     return emptyStore()
   }
   parsed.startTimes = (parsed.startTimes ?? []).map(toStartTime)
-  for (const document of parsed.documents) {
+  // Templates are younger than the store, so a stored one may be missing
+  // entirely. A broken one is dropped on its own rather than binning the store.
+  parsed.templates = Array.isArray(parsed.templates) ? parsed.templates.filter(isDocument) : []
+  for (const document of [...parsed.documents, ...parsed.templates]) {
     for (const column of document.columns) {
       if ((column.type as string) === 'longText') column.type = 'text'
     }

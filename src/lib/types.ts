@@ -58,6 +58,8 @@ export interface ScheduleDocument {
 
 export interface Store {
   documents: ScheduleDocument[]
+  /** Saved documents a new one can start from. Copies, with no link back. */
+  templates: ScheduleDocument[]
   lists: SelectList[]
   /** The times the start-time field offers. Fixed: it is never attached to a column, never deleted. */
   startTimes: StartTime[]

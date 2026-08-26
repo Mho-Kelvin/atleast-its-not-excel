@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte'
+import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it } from 'vitest'
 import App from './App.svelte'
 import { createDocument } from './lib/document'
@@ -120,5 +120,101 @@ describe('start time', () => {
     await openDocument()
 
     expect(startTimeField().tagName).toBe('INPUT')
+  })
+})
+
+function storedStore() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
+}
+
+/** A document with something in it, so a copy has something to carry over. */
+function seedFilled(title = 'Ablauf'): void {
+  const document = createDocument(title)
+  document.rows[0].cells[document.columns[1].id] = 'Einlass'
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ documents: [document], templates: [], lists: [], startTimes: [] }),
+  )
+}
+
+describe('templates', () => {
+  it('saves a document as a template without touching the document', async () => {
+    seedFilled()
+    render(App)
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Als Vorlage speichern' }))
+
+    const store = storedStore()
+    expect(store.documents).toHaveLength(1)
+    expect(store.templates).toHaveLength(1)
+    expect(store.templates[0].title).toBe('Ablauf')
+    expect(store.templates[0].id).not.toBe(store.documents[0].id)
+    expect(screen.getByRole('heading', { name: 'Vorlagen' })).toBeTruthy()
+  })
+
+  it('starts a new document from a template, carrying its rows over', async () => {
+    seedFilled()
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Als Vorlage speichern' }))
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Neues Dokument' }))
+    // The cards behind the dialog carry the same name, so the choice is taken
+    // from inside it.
+    await fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: /Ablauf/ }),
+    )
+
+    const store = storedStore()
+    expect(store.documents).toHaveLength(2)
+    const created = store.documents[1]
+    expect(created.title).toBe('Ablauf')
+    expect(created.id).not.toBe(store.templates[0].id)
+    expect(Object.values(created.rows[0].cells)).toContain('Einlass')
+    // Fresh column ids: editing the copy must not reach back into the template.
+    expect(created.columns[0].id).not.toBe(store.templates[0].columns[0].id)
+    expect(screen.getByLabelText('Titel')).toBeTruthy()
+  })
+
+  it('starts a blank document when that is what was picked', async () => {
+    seedFilled()
+    render(App)
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Neues Dokument' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Leeres Dokument' }))
+
+    const store = storedStore()
+    expect(store.documents).toHaveLength(2)
+    expect(store.documents[1].title).toBe('')
+  })
+
+  it('edits the template itself when a template card is opened', async () => {
+    seedFilled()
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Als Vorlage speichern' }))
+
+    // The heading marks the section; the card below it is the template's own.
+    await fireEvent.click(screen.getAllByRole('button', { name: 'Ablauf' })[1])
+    expect(screen.getByText('Vorlage')).toBeTruthy()
+    await fireEvent.input(screen.getByLabelText('Titel'), { target: { value: 'Standard' } })
+
+    const store = storedStore()
+    expect(store.templates[0].title).toBe('Standard')
+    expect(store.documents[0].title).toBe('Ablauf')
+  })
+
+  it('deletes a template from its card, and the section goes with the last one', async () => {
+    seedFilled()
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Als Vorlage speichern' }))
+    await fireEvent.click(screen.getAllByRole('button', { name: 'Ablauf' })[1])
+    await fireEvent.click(screen.getByRole('button', { name: 'Zurück' }))
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Vorlage löschen' }))
+    await fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Vorlage löschen' }),
+    )
+
+    expect(storedStore().templates).toHaveLength(0)
+    expect(screen.queryByText('Vorlagen')).toBeNull()
   })
 })

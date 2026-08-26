@@ -17,9 +17,15 @@ async function addColumn(page: Page, name: string): Promise<void> {
   await page.keyboard.press('Escape')
 }
 
+/** Every new document goes through the picker, blank or not. */
+async function startBlankDocument(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await page.getByRole('button', { name: 'Leeres Dokument' }).click()
+}
+
 async function openNewDocument(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await startBlankDocument(page)
   await expect(page.locator('table')).toBeVisible()
 }
 
@@ -260,7 +266,7 @@ test('a dropdown column offers the values of its list', async ({ page }) => {
   await page.getByLabel('Wert: Räume').fill('Saal')
   await page.getByRole('button', { name: 'Schließen' }).click()
 
-  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await startBlankDocument(page)
   await page.getByTitle('Spalte hinzufügen').click()
   await page.getByLabel('Spaltenname').fill('Ort')
   await page.getByLabel('Typ').selectOption('select')
@@ -298,7 +304,7 @@ test('an edited list value reaches the cells that offer it', async ({ page }) =>
   await page.getByLabel('Wert: Räume').fill('Sal')
   await page.getByRole('button', { name: 'Schließen' }).click()
 
-  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await startBlankDocument(page)
   await page.getByTitle('Spalte hinzufügen').click()
   await page.getByLabel('Spaltenname').fill('Ort')
   await page.getByLabel('Typ').selectOption('select')
@@ -486,7 +492,7 @@ test('a chosen value starts where a typed one does', async ({ page }) => {
   await page.getByLabel('Wert: Räume').fill('Saal')
   await page.getByRole('button', { name: 'Schließen' }).click()
 
-  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await startBlankDocument(page)
   await page.getByTitle('Spalte hinzufügen').click()
   await page.getByLabel('Spaltenname').fill('Ort')
   await page.getByLabel('Typ').selectOption('select')
@@ -533,7 +539,7 @@ test('a dropdown shows its longest value in full', async ({ page }) => {
   await page.getByLabel('Wert: Räume').fill('Honigkuchenpferd im großen Saal')
   await page.getByRole('button', { name: 'Schließen' }).click()
 
-  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  await startBlankDocument(page)
   await page.getByTitle('Spalte hinzufügen').click()
   await page.getByLabel('Spaltenname').fill('Ort')
   await page.getByLabel('Typ').selectOption('select')
@@ -654,4 +660,43 @@ test('a table wider than its box says so at the edge it continues past', async (
   await frame.locator('.scroller').evaluate((node) => node.scrollTo({ left: node.scrollWidth }))
   await expect(frame).toHaveClass(/more-left/)
   await expect(frame).not.toHaveClass(/more-right/)
+})
+
+test('a document saved as a template is what the next one starts from', async ({ page }) => {
+  await openNewDocument(page)
+  await page.getByLabel('Titel').fill('Sonntagsablauf')
+  await addColumn(page, 'Raum')
+  await page.fill(durationInput(1), '15')
+  await textInput(page, 1).fill('Begrüßung')
+
+  await page.getByRole('button', { name: 'Als Vorlage speichern' }).click()
+  await page.getByRole('button', { name: 'Zurück' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Vorlagen' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Neues Dokument' }).click()
+  const picker = page.getByRole('dialog')
+  await picker.getByRole('button', { name: /Sonntagsablauf/ }).click()
+
+  // The copy carries the columns, the rows and the title over.
+  await expect(page.getByLabel('Titel')).toHaveValue('Sonntagsablauf')
+  await expect(textInput(page, 1)).toHaveValue('Begrüßung')
+  await expect(page.locator(durationInput(1))).toHaveValue('15')
+  await expect(page.locator('thead .column-name')).toHaveText([
+    'Uhrzeit',
+    'Programmpunkt',
+    'Verantwortlich',
+    'Raum',
+  ])
+
+  // Editing the copy leaves the template it came from alone.
+  await textInput(page, 1).fill('Einlass')
+  await page.getByRole('button', { name: 'Zurück' }).click()
+  await page
+    .getByRole('region', { name: 'Vorlagen' })
+    .getByRole('button', { name: 'Sonntagsablauf' })
+    .click()
+  await expect(page.getByText('Vorlage', { exact: true })).toBeVisible()
+  await expect(textInput(page, 1)).toHaveValue('Begrüßung')
+  await expect(page.getByRole('button', { name: 'Als Vorlage speichern' })).toBeHidden()
 })

@@ -83,6 +83,35 @@ describe('loadStore', () => {
     expect(loadStore().documents[0].columns[1].type).toBe('text')
   })
 
+  it('gives a store written before the templates an empty list', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [], lists: [] }))
+
+    expect(loadStore().templates).toEqual([])
+  })
+
+  it('drops a broken template without binning the documents beside it', () => {
+    const document = createDocument('Ablauf')
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ documents: [document], templates: [{ id: 'a' }], lists: [] }),
+    )
+
+    const store = loadStore()
+    expect(store.templates).toEqual([])
+    expect(store.documents).toHaveLength(1)
+  })
+
+  it('reads a template column stored as the removed longText type as text', () => {
+    const template = createDocument('Vorlage')
+    ;(template.columns[1] as { type: string }).type = 'longText'
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ documents: [], templates: [template], lists: [] }),
+    )
+
+    expect(loadStore().templates[0].columns[1].type).toBe('text')
+  })
+
   it('rejects a document that is missing fields', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [{ id: 'a' }], lists: [] }))
 
