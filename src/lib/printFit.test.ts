@@ -3,11 +3,16 @@ import { fitToPage, printFitNotice, MIN_SCALE } from './printFit'
 
 const PAGE = 700
 
-/** Stands in for the probe: every cell costs its width, a hidden one costs nothing. */
-function measurer(widths: number[], available = PAGE) {
-  return (hidden: number[]) => {
+/**
+ * Stands in for the probe: every cell costs its width, a hidden one costs
+ * nothing. `wrapped` is the same table with its headings broken across lines,
+ * which is what a narrower cell means here.
+ */
+function measurer(widths: number[], available = PAGE, wrapped = widths) {
+  return (hidden: number[], wrapHeaders: boolean) => {
     let required = 0
-    widths.forEach((width, position) => {
+    const costs = wrapHeaders ? wrapped : widths
+    costs.forEach((width, position) => {
       if (!hidden.includes(position)) required += width
     })
     return { required, available }
@@ -22,7 +27,7 @@ describe('fitToPage', () => {
   it('leaves a table that already fits alone', () => {
     const fit = fitToPage(positions(4), measurer([100, 100, 100, 100]))
 
-    expect(fit).toEqual({ scale: 1, hidden: [], overflows: false })
+    expect(fit).toEqual({ scale: 1, hidden: [], wrapHeaders: false, overflows: false })
   })
 
   it('shrinks a table that is a little too wide', () => {
@@ -74,39 +79,72 @@ describe('fitToPage', () => {
   it('reports a fit when there is no layout to read', () => {
     const fit = fitToPage(positions(4), measurer([300, 300, 300, 300], 0))
 
-    expect(fit).toEqual({ scale: 1, hidden: [], overflows: false })
+    expect(fit).toEqual({ scale: 1, hidden: [], wrapHeaders: false, overflows: false })
+  })
+
+  it('leaves the headings on one line while shrinking alone is enough', () => {
+    const fit = fitToPage(positions(4), measurer([200, 200, 200, 200], PAGE, [50, 50, 50, 50]))
+
+    expect(fit.wrapHeaders).toBe(false)
+    expect(fit.scale).toBeCloseTo(700 / 800)
+  })
+
+  it('breaks the headings once the floor is reached, and prints full size again', () => {
+    // 900 needs 0.77, under the floor; wrapped it is 600 and fits as it stands.
+    const fit = fitToPage(positions(3), measurer([300, 300, 300], PAGE, [200, 200, 200]))
+
+    expect(fit.wrapHeaders).toBe(true)
+    expect(fit.hidden).toEqual([])
+    expect(fit.scale).toBe(1)
+  })
+
+  it('gives a cell up only after breaking the headings was not enough', () => {
+    const fit = fitToPage(positions(3), measurer([400, 400, 400], PAGE, [300, 300, 300]))
+
+    expect(fit.wrapHeaders).toBe(true)
+    expect(fit.hidden).toEqual([2])
+  })
+
+  it('keeps the headings broken across every cell it drops', () => {
+    const fit = fitToPage(
+      positions(4),
+      measurer([4000, 4000, 4000, 4000], PAGE, [400, 400, 400, 400]),
+    )
+
+    expect(fit.wrapHeaders).toBe(true)
+    expect(fit.hidden).toEqual([3, 2])
   })
 })
 
 describe('printFitNotice', () => {
   it('says nothing when the table prints as it stands', () => {
-    expect(printFitNotice({ scale: 1, hidden: [], overflows: false })).toBe('')
+    expect(printFitNotice({ scale: 1, hidden: [], wrapHeaders: false, overflows: false })).toBe('')
   })
 
   it('rounds down, so it never claims more room than it took', () => {
-    expect(printFitNotice({ scale: 0.889, hidden: [], overflows: false })).toBe(
+    expect(printFitNotice({ scale: 0.889, hidden: [], wrapHeaders: false, overflows: false })).toBe(
       'Auf 88% verkleinert',
     )
   })
 
   it('counts the columns it gave up, and declines the word', () => {
-    expect(printFitNotice({ scale: 0.8, hidden: ['a'], overflows: false })).toBe(
-      'Auf 80% verkleinert, 1 Spalte ausgeblendet',
-    )
-    expect(printFitNotice({ scale: 0.8, hidden: ['a', 'b'], overflows: false })).toBe(
-      'Auf 80% verkleinert, 2 Spalten ausgeblendet',
-    )
+    expect(
+      printFitNotice({ scale: 0.8, hidden: ['a'], wrapHeaders: false, overflows: false }),
+    ).toBe('Auf 80% verkleinert, 1 Spalte ausgeblendet')
+    expect(
+      printFitNotice({ scale: 0.8, hidden: ['a', 'b'], wrapHeaders: false, overflows: false }),
+    ).toBe('Auf 80% verkleinert, 2 Spalten ausgeblendet')
   })
 
   it('mentions only the columns when dropping one bought back the full size', () => {
-    expect(printFitNotice({ scale: 1, hidden: ['a'], overflows: false })).toBe(
+    expect(printFitNotice({ scale: 1, hidden: ['a'], wrapHeaders: false, overflows: false })).toBe(
       '1 Spalte ausgeblendet',
     )
   })
 
   it('admits it when nothing left to give was enough', () => {
-    expect(printFitNotice({ scale: 0.8, hidden: ['a', 'b'], overflows: true })).toBe(
-      'Passt nicht auf A4',
-    )
+    expect(
+      printFitNotice({ scale: 0.8, hidden: ['a', 'b'], wrapHeaders: false, overflows: true }),
+    ).toBe('Passt nicht auf A4')
   })
 })

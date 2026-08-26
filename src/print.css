@@ -31,6 +31,12 @@
   min-width: 0 !important;
 }
 
+/* The probe renders on screen, so the component's own print rule never reaches
+   it. Same property, so the copy wraps its headings where the paper would. */
+.print-probe th {
+  white-space: var(--header-wrap, nowrap) !important;
+}
+
 .print-probe .draft,
 .print-probe .print-hidden {
   display: none !important;

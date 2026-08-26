@@ -82,6 +82,7 @@
     () => printableCells(slots, plan),
   )
   const autoHidden = $derived(fit.hidden)
+  const headerWrap = $derived(fit.value.wrapHeaders ? 'normal' : 'nowrap')
 
   $effect(() => {
     onprintfit?.(fit.value)
@@ -151,7 +152,7 @@
      never does. The edges fade while there is more table on that side. -->
 <div class="frame" class:more-left={edges.left} class:more-right={edges.right}>
   <div class="scroller" use:edges.watch onscroll={edges.measure}>
-    <table bind:this={table} style="--print-scale: {fit.value.scale}">
+    <table bind:this={table} style="--print-scale: {fit.value.scale}; --header-wrap: {headerWrap}">
       <thead>
         <tr
           bind:this={headerRow}
@@ -305,6 +306,9 @@
     border-collapse: collapse;
   }
 
+  /* Handle, name and print mark stay on one line: the column widens for a long
+     name instead of breaking the header into stacked pieces. The break-word is
+     inert until the print rule below lets the heading wrap. */
   th {
     border: 1px solid var(--rule);
     padding: 0.35rem 0.4rem;
@@ -313,11 +317,12 @@
     background: var(--paper-sunk);
     font-weight: 600;
     color: var(--ink);
+    white-space: nowrap;
+    overflow-wrap: break-word;
   }
 
   .time-column {
     width: 6ch;
-    white-space: nowrap;
   }
 
   /* The start time and the duration it is computed from are one group. The
@@ -338,13 +343,6 @@
     width: 2ch;
     padding-left: 0;
     padding-right: 0;
-  }
-
-  /* Handle, name and print mark stay on one line: the column widens for a long
-     name instead of breaking the header into stacked pieces. Paper gets the
-     normal wrapping back, where there is no handle and no width to spare. */
-  th {
-    white-space: nowrap;
   }
 
   .announcer {
@@ -376,6 +374,12 @@
        width stretched to match would push it back off the page. */
     table {
       zoom: var(--print-scale, 1);
+    }
+
+    /* Set from the measured fit too, once shrinking alone stopped being enough:
+       a heading that breaks costs a line, a dropped column costs its contents. */
+    th {
+      white-space: var(--header-wrap, nowrap);
     }
 
     .scroller {

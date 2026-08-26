@@ -179,6 +179,44 @@ test('a table that cannot shrink far enough drops its last column, and takes it 
   await expect(page.locator(`thead th:has-text("${last}")`)).toBeVisible()
 })
 
+/** Reads the wrap the fit settled on, the way printScale reads its zoom. */
+async function headerWrap(page: Page): Promise<string> {
+  return page.locator('table').evaluate((table) => table.style.getPropertyValue('--header-wrap'))
+}
+
+test('a heading breaks across lines before the page gives a column up', async ({ page }) => {
+  await openNewDocument(page)
+
+  // The Dauer heading is bare text in the cell, so nothing else lets it wrap.
+  // Long enough that keeping it on one line costs more than the floor allows.
+  await page.locator('thead .column-name').first().click()
+  await page.getByLabel('Name Dauer-Spalte').fill('Dauer des ganzen Programmpunkts')
+  await page.keyboard.press('Escape')
+  for (const name of WIDE_COLUMNS.slice(0, 4)) await addColumn(page, name)
+
+  const heading = page.locator('thead th').filter({ hasText: 'Dauer des ganzen' })
+  const oneLine = await heading.evaluate((cell) => parseFloat(getComputedStyle(cell).lineHeight))
+
+  // Measuring is debounced, so the answer arrives a moment after the last edit.
+  await expect.poll(() => headerWrap(page)).toBe('normal')
+  await page.emulateMedia({ media: 'print' })
+
+  const height = await heading.evaluate((cell) => cell.getBoundingClientRect().height)
+  expect(height).toBeGreaterThan(oneLine * 1.5)
+
+  // Wrapping is what bought the room: the table keeps every column and prints
+  // no smaller than the floor.
+  expect(await printScale(page)).toBeGreaterThanOrEqual(0.8)
+  await expect(page.locator('thead .print-auto-hidden')).toHaveCount(0)
+})
+
+test('a table that fits keeps its headings on one line', async ({ page }) => {
+  await openNewDocument(page)
+
+  await expect(page.getByText(/verkleinert|ausgeblendet/)).toHaveCount(0)
+  expect(await headerWrap(page)).toBe('nowrap')
+})
+
 test('the page renders onto A4 as a PDF', async ({ page }) => {
   await openNewDocument(page)
   await page.fill(durationInput(1), '15')

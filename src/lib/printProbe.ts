@@ -45,10 +45,18 @@ function flattenControls(source: HTMLElement, copy: HTMLElement): void {
   })
 }
 
-function measureOnce(table: HTMLTableElement, hidden: readonly number[]): Measured {
+function measureOnce(
+  table: HTMLTableElement,
+  hidden: readonly number[],
+  wrapHeaders: boolean,
+): Measured {
   const probe = probeContainer()
   const copy = table.cloneNode(true) as HTMLTableElement
 
+  // The same custom property the printed table reads, so the copy is measured
+  // wrapping exactly where the paper would. The clone brings the live table's
+  // value along, which is last run's answer, not this attempt's.
+  copy.style.setProperty('--header-wrap', wrapHeaders ? 'normal' : 'nowrap')
   flattenControls(table, copy)
   for (const node of copy.querySelectorAll('.no-print')) node.remove()
   // Last run's guesses, which this run is free to take back.
@@ -76,11 +84,18 @@ export function fitTableToPage(
   ids: readonly string[],
   droppable: readonly number[],
 ): PrintFit {
-  const plan = fitToPage(droppable, (hidden) => measureOnce(table, hidden))
+  const plan = fitToPage(droppable, (hidden, wrapHeaders) =>
+    measureOnce(table, hidden, wrapHeaders),
+  )
   const hidden: string[] = []
   for (const position of plan.hidden) {
     const id = ids[position]
     if (id !== undefined) hidden.push(id)
   }
-  return { scale: plan.scale, hidden, overflows: plan.overflows }
+  return {
+    scale: plan.scale,
+    hidden,
+    wrapHeaders: plan.wrapHeaders,
+    overflows: plan.overflows,
+  }
 }
