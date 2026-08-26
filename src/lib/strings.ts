@@ -10,6 +10,7 @@ export const strings = {
   removeRow: 'Zeile löschen',
   dragRow: 'Zeile verschieben',
   dragColumn: 'Spalte verschieben',
+  dragHeaderField: 'Feld verschieben',
   dragHelp: 'Zum Verschieben Leertaste drücken, dann Pfeiltasten. Escape bricht ab.',
   print: 'Drucken',
   undo: 'Rückgängig',
@@ -98,4 +99,7 @@ export const dragAnnouncements = {
   rowMoved: (position: number, count: number) => `Zeile, Position ${position} von ${count}.`,
   rowDropped: (position: number, count: number) =>
     `Zeile abgelegt auf Position ${position} von ${count}.`,
+  headerFieldMoved: (position: number, count: number) => `Feld, Position ${position} von ${count}.`,
+  headerFieldDropped: (position: number, count: number) =>
+    `Feld abgelegt auf Position ${position} von ${count}.`,
 }

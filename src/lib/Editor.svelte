@@ -206,7 +206,7 @@
       {/if}
     </p>
 
-    <HeaderFieldsEditor bind:plan />
+    <HeaderFieldsEditor bind:plan ondragstatechange={(active) => (dragging = active)} />
   </header>
 
   <ScheduleTable

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/svelte'
+import { SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action'
 import { describe, expect, it } from 'vitest'
 import HeaderFieldsEditor from './HeaderFieldsEditor.svelte'
 import { createDocument, createHeaderField } from './document'
@@ -34,6 +35,25 @@ describe('HeaderFieldsEditor', () => {
     await fireEvent.click(screen.getByTitle('Feld „Ort“ löschen'))
 
     expect(plan.headerFields).toHaveLength(0)
+  })
+
+  it('writes a dropped order back without the library placeholder', async () => {
+    const first = createHeaderField('Ort')
+    const second = createHeaderField('Datum')
+    const plan = renderEditor([first, second])
+
+    const zone = document.querySelector('section')!
+    await fireEvent(
+      zone,
+      new CustomEvent('finalize', {
+        detail: {
+          items: [second, { id: SHADOW_PLACEHOLDER_ITEM_ID }, first],
+          info: { id: second.id },
+        },
+      }),
+    )
+
+    expect(plan.headerFields).toEqual([second, first])
   })
 
   it('marks a field nobody filled in, so print can drop it', () => {

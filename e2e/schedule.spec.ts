@@ -410,6 +410,27 @@ test('rows can be dragged into a new order', async ({ page }) => {
   await expect(textInput(page, 2)).toHaveValue('Erste')
 })
 
+test('header fields can be dragged into a new order', async ({ page }) => {
+  await openNewDocument(page)
+
+  const labels = page.locator('.field .label')
+  await labels.nth(0).fill('Ort')
+  await labels.nth(1).fill('Datum')
+
+  const handle = page.locator('.field:nth-child(1) .drag-handle')
+  const target = page.locator('.field:nth-child(2)')
+  const from = (await handle.boundingBox())!
+  const to = (await target.boundingBox())!
+
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height, { steps: 10 })
+  await page.mouse.up()
+
+  await expect(labels.nth(0)).toHaveValue('Datum')
+  await expect(labels.nth(1)).toHaveValue('Ort')
+})
+
 test('a cell grows with its text instead of cropping it', async ({ page }) => {
   await openNewDocument(page)
 
