@@ -41,6 +41,7 @@ export const strings = {
   customValue: 'Eigener Wert …',
   durationColumnTaken: 'Es kann nur eine Dauer-Spalte geben.',
   printColumn: 'Spalte drucken',
+  printStartTime: 'Beginn drucken',
   printTime: 'Uhrzeit drucken',
   printDuration: 'Dauer drucken',
   notPrinted: 'Wird nicht gedruckt',

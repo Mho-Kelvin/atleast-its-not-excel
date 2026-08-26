@@ -46,6 +46,8 @@ export interface ScheduleDocument {
    * same time apart; the time above is what everything else reads.
    */
   startTimeId?: string
+  /** Absent means the Beginn line prints, so documents stored before this existed keep printing. */
+  hideStartTimeInPrint?: boolean
   columns: Column[]
   rows: Row[]
   /** The start-time cell is not a column, so its name and print flag live here. */

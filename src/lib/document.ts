@@ -95,6 +95,8 @@ export function duplicateDocument(source: ScheduleDocument, title: string): Sche
     title,
     headerFields: source.headerFields.map((field) => ({ ...field, id: newId() })),
     startTime: source.startTime,
+    startTimeId: source.startTimeId,
+    hideStartTimeInPrint: source.hideStartTimeInPrint,
     columns,
     rows,
     timeTitle: source.timeTitle,

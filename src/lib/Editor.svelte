@@ -173,7 +173,7 @@
 
     <!-- Explicit for/id, not a wrapping <label>: a wrapped select pulls its own
          option text into its accessible name. -->
-    <p class="start">
+    <p class="start" class:print-hidden={plan.hideStartTimeInPrint}>
       <span class="clock no-print"><Icon name="clock" size={16} /></span>
       <label for="start-time">{strings.startTimeLabel}</label>
       {#if startTimeChoices.length > 0 && !startTimeIsCustom}
@@ -204,6 +204,15 @@
           {strings.startTimeInvalid}
         </span>
       {/if}
+
+      <label class="check no-print">
+        <input
+          type="checkbox"
+          checked={plan.hideStartTimeInPrint !== true}
+          onchange={(event) => (plan.hideStartTimeInPrint = !event.currentTarget.checked)}
+        />
+        {strings.printStartTime}
+      </label>
     </p>
 
     <HeaderFieldsEditor bind:plan ondragstatechange={(active) => (dragging = active)} />
@@ -345,6 +354,14 @@
     align-items: center;
     gap: var(--space-1);
     color: var(--red);
+  }
+
+  .check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: var(--space-3);
+    color: var(--ink-faint);
   }
 
   @media print {
