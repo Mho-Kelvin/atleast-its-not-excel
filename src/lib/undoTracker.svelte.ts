@@ -16,7 +16,7 @@ function changeKey(document: ScheduleDocument): string {
  * order on every pointer move; one drag then costs one undo step.
  */
 export function createUndoTracker(document: () => ScheduleDocument, suspended: () => boolean) {
-  const history = createHistory()
+  const history = $state(createHistory())
   let lastKey = ''
   let lastSnapshot = ''
   let applyingHistory = false
@@ -44,6 +44,12 @@ export function createUndoTracker(document: () => ScheduleDocument, suspended: (
   return {
     get lastSnapshot(): string {
       return lastSnapshot
+    },
+    get canUndo(): boolean {
+      return history.past.length > 0
+    },
+    get canRedo(): boolean {
+      return history.future.length > 0
     },
     undoFrom(current: string): string | null {
       return take(undo(history, current))

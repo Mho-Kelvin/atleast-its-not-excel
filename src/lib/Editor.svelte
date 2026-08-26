@@ -121,6 +121,7 @@
       class="icon"
       title={strings.undo}
       aria-label={strings.undo}
+      disabled={!tracker.canUndo}
       onclick={() => restore(tracker.undoFrom(tracker.lastSnapshot))}
     >
       <Icon name="undo" />
@@ -130,6 +131,7 @@
       class="icon"
       title={strings.redo}
       aria-label={strings.redo}
+      disabled={!tracker.canRedo}
       onclick={() => restore(tracker.redoFrom(tracker.lastSnapshot))}
     >
       <Icon name="redo" />
