@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createDocument } from './document'
 import { emptyStore, loadStore, saveStore } from './storage'
 
-const STORAGE_KEY = 'tobias-tool/v1'
-const BROKEN_KEY = 'tobias-tool/v1-broken'
+const STORAGE_KEY = 'atleast-its-not-excel/v1'
+const BROKEN_KEY = 'atleast-its-not-excel/v1-broken'
+const LEGACY_STORAGE_KEY = 'tobias-tool/v1'
 
 beforeEach(() => {
   localStorage.clear()
@@ -21,6 +22,25 @@ describe('loadStore', () => {
     saveStore(store)
 
     expect(loadStore()).toEqual(store)
+  })
+
+  it('reads a store left under the key the app used before it was renamed', () => {
+    const store = emptyStore()
+    store.documents.push(createDocument('Ablauf'))
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(store))
+
+    expect(loadStore()).toEqual(store)
+  })
+
+  it('prefers the current key over the old one', () => {
+    const current = emptyStore()
+    current.documents.push(createDocument('Neu'))
+    const legacy = emptyStore()
+    legacy.documents.push(createDocument('Alt'))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(current))
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(legacy))
+
+    expect(loadStore()).toEqual(current)
   })
 
   it('keeps unreadable data under a second key instead of dropping it', () => {

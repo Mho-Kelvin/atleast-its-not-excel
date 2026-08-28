@@ -4,7 +4,7 @@ import App from './App.svelte'
 import { createDocument } from './lib/document'
 import type { StartTime } from './lib/types'
 
-const STORAGE_KEY = 'tobias-tool/v1'
+const STORAGE_KEY = 'atleast-its-not-excel/v1'
 
 const EMPFANG: StartTime = { id: 'empfang', time: '08:00', name: 'Empfang' }
 const NEUN: StartTime = { id: 'neun', time: '09:00' }

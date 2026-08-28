@@ -1,4 +1,4 @@
-# tobias-tool
+# atleast-its-not-excel
 
 Ablaufpläne ausfüllen und auf A4 drucken. Läuft komplett im Browser, ohne Server und ohne Konto.
 

@@ -1,8 +1,11 @@
 import { createStartTime } from './lists'
 import type { ScheduleDocument, SelectList, StartTime, Store } from './types'
 
-const STORAGE_KEY = 'tobias-tool/v1'
-const BROKEN_KEY = 'tobias-tool/v1-broken'
+const STORAGE_KEY = 'atleast-its-not-excel/v1'
+const BROKEN_KEY = 'atleast-its-not-excel/v1-broken'
+// The app was renamed after people already had documents saved under the old
+// key. Read falls back to it once; the next write lands on the new key.
+const LEGACY_STORAGE_KEY = 'tobias-tool/v1'
 
 export function emptyStore(): Store {
   return { documents: [], templates: [], lists: [], startTimes: [] }
@@ -14,7 +17,7 @@ export function emptyStore(): Store {
  * someone their documents.
  */
 export function loadStore(): Store {
-  const raw = localStorage.getItem(STORAGE_KEY)
+  const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY)
   if (raw === null) return emptyStore()
 
   let parsed: unknown
