@@ -2,6 +2,8 @@
 
 Ablaufpläne ausfüllen und auf A4 drucken. Läuft komplett im Browser, ohne Server und ohne Konto.
 
+Direkt benutzen: <https://mho-kelvin.github.io/atleast-its-not-excel/>
+
 ## Entwicklung
 
 ```
