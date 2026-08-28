@@ -56,6 +56,14 @@ export interface ScheduleDocument {
   updatedAt: number
 }
 
+/** What an import actually added, per drawer, for the message it reports. */
+export interface ImportCounts {
+  documents: number
+  templates: number
+  lists: number
+  startTimes: number
+}
+
 export interface Store {
   documents: ScheduleDocument[]
   /** Saved documents a new one can start from. Copies, with no link back. */

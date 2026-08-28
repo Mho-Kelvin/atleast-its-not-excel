@@ -17,6 +17,10 @@
     ondelete,
     ondeletetemplate,
     onmanagelists,
+    onexport,
+    onexporttemplate,
+    onbackup,
+    onimport,
   }: {
     documents: ScheduleDocument[]
     templates: ScheduleDocument[]
@@ -28,6 +32,10 @@
     ondelete: (id: string) => void
     ondeletetemplate: (id: string) => void
     onmanagelists: () => void
+    onexport: (id: string) => void
+    onexporttemplate: (id: string) => void
+    onbackup: () => void
+    onimport: () => void
   } = $props()
 
   const sorted = $derived([...documents].sort((a, b) => b.updatedAt - a.updatedAt))
@@ -61,6 +69,14 @@
       <button type="button" onclick={onmanagelists}>
         <Icon name="lists" />
         {strings.lists}
+      </button>
+      <button type="button" onclick={onbackup}>
+        <Icon name="export" />
+        {strings.exportBackup}
+      </button>
+      <button type="button" onclick={onimport}>
+        <Icon name="import" />
+        {strings.importFile}
       </button>
     </div>
   </div>
@@ -132,6 +148,15 @@
           <Icon name="template" size={18} />
         </button>
       {/if}
+      <button
+        type="button"
+        class="icon"
+        title={template ? strings.exportTemplate : strings.exportDocument}
+        aria-label={template ? strings.exportTemplate : strings.exportDocument}
+        onclick={() => (template ? onexporttemplate(entry.id) : onexport(entry.id))}
+      >
+        <Icon name="export" size={18} />
+      </button>
       <button
         type="button"
         class="icon danger"

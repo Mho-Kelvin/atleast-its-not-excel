@@ -10,6 +10,7 @@
     removeList,
   } from './lists'
   import { strings } from './strings'
+  import { download, listsEnvelope } from './transfer'
   import type { SelectList, StartTime, Store } from './types'
 
   let {
@@ -89,15 +90,21 @@
   >
     <div class="bar">
       <h1 id="lists-title">{strings.lists}</h1>
-      <button
-        type="button"
-        class="icon"
-        title={strings.close}
-        aria-label={strings.close}
-        onclick={onclose}
-      >
-        <Icon name="close" />
-      </button>
+      <div class="bar-actions">
+        <button type="button" onclick={() => download(listsEnvelope(store), strings.listsFileName)}>
+          <Icon name="export" size={18} />
+          {strings.exportLists}
+        </button>
+        <button
+          type="button"
+          class="icon"
+          title={strings.close}
+          aria-label={strings.close}
+          onclick={onclose}
+        >
+          <Icon name="close" />
+        </button>
+      </div>
     </div>
 
     <div class="add">
@@ -249,6 +256,12 @@
 
   h1 {
     margin: 0;
+  }
+
+  .bar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   article {

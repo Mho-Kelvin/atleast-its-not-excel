@@ -23,6 +23,10 @@ function renderList(
     ondelete: vi.fn(),
     ondeletetemplate: vi.fn(),
     onmanagelists: vi.fn(),
+    onexport: vi.fn(),
+    onexporttemplate: vi.fn(),
+    onbackup: vi.fn(),
+    onimport: vi.fn(),
   }
   render(DocumentList, { props: { documents, templates, ...handlers } })
   return handlers

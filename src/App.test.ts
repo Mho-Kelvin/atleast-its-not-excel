@@ -2,6 +2,9 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it } from 'vitest'
 import App from './App.svelte'
 import { createDocument } from './lib/document'
+import { createList } from './lib/lists'
+import { emptyStore } from './lib/storage'
+import { backupEnvelope, documentEnvelope } from './lib/transfer'
 import type { StartTime } from './lib/types'
 
 const STORAGE_KEY = 'atleast-its-not-excel/v1'
@@ -136,6 +139,43 @@ function seedFilled(title = 'Ablauf'): void {
     JSON.stringify({ documents: [document], templates: [], lists: [], startTimes: [] }),
   )
 }
+
+describe('import', () => {
+  async function pick(text: string): Promise<void> {
+    const { container } = render(App)
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+    await fireEvent.change(input, {
+      target: { files: [new File([text], 'datei.json', { type: 'application/json' })] },
+    })
+  }
+
+  it('reports what came in and shows it on the home screen', async () => {
+    seedFilled()
+    await pick(JSON.stringify(documentEnvelope(createDocument('Importiert'))))
+
+    expect(await screen.findByText('1 Dokument importiert')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Importiert' })).toBeTruthy()
+    expect(storedStore().documents).toHaveLength(2)
+  })
+
+  it('counts every drawer a backup filled', async () => {
+    const store = emptyStore()
+    store.documents = [createDocument('Ablauf'), createDocument('Probe')]
+    store.lists = [createList('Räume')]
+    await pick(JSON.stringify(backupEnvelope(store)))
+
+    expect(await screen.findByText('2 Dokumente, 1 Liste importiert')).toBeTruthy()
+  })
+
+  it('says so and changes nothing when the file is unreadable', async () => {
+    seedFilled()
+    await pick('kein JSON')
+
+    const message = await screen.findByText('Datei nicht lesbar')
+    expect(message.getAttribute('role')).toBe('alert')
+    expect(storedStore().documents).toHaveLength(1)
+  })
+})
 
 describe('templates', () => {
   it('saves a document as a template without touching the document', async () => {

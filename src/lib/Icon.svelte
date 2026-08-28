@@ -21,6 +21,8 @@
     warning: 'M12 3 2 20h20L12 3zM12 9v5M12 17h.01',
     noPrint: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M6 6l12 12',
     grip: 'M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01',
+    export: 'M12 3v11M8 10l4 4 4-4M4 20h16',
+    import: 'M12 14V3M8 7l4-4 4 4M4 20h16',
   }
 
   export type IconName = keyof typeof PATHS

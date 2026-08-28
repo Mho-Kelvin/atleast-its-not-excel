@@ -6,7 +6,14 @@
   import { createDocument, duplicateDocument } from './lib/document'
   import { closeLists, listsDialog, openLists } from './lib/listsDialog.svelte'
   import { loadStore, saveStore } from './lib/storage'
-  import { strings } from './lib/strings'
+  import { counts, strings } from './lib/strings'
+  import {
+    backupEnvelope,
+    documentEnvelope,
+    download,
+    importInto,
+    templateEnvelope,
+  } from './lib/transfer'
 
   type View = 'documents' | 'editor'
   /** Which of the store's two drawers the editor is working in. */
@@ -18,6 +25,8 @@
   let currentId = $state<string | null>(null)
   let picking = $state(false)
   let saveFailed = $state(false)
+  let importReport = $state<{ text: string; failed: boolean } | null>(null)
+  let fileInput = $state<HTMLInputElement | null>(null)
 
   const currentIndex = $derived(store[drawer].findIndex((entry) => entry.id === currentId))
 
@@ -33,6 +42,31 @@
     drawer = from
     currentId = id
     view = 'editor'
+    importReport = null
+  }
+
+  function exportDocument(id: string): void {
+    const source = store.documents.find((entry) => entry.id === id)
+    if (source) download(documentEnvelope(source), source.title)
+  }
+
+  /** A template travels with the lists its select columns point at. */
+  function exportTemplate(id: string): void {
+    const source = store.templates.find((entry) => entry.id === id)
+    if (source) download(templateEnvelope(source, store.lists), source.title)
+  }
+
+  async function importFile(event: Event): Promise<void> {
+    const input = event.currentTarget as HTMLInputElement
+    const file = input.files?.[0]
+    // Cleared before reading, so picking the same file twice still fires change.
+    input.value = ''
+    if (!file) return
+
+    const result = importInto(store, await file.text())
+    importReport = result.ok
+      ? { text: counts.imported(result.counts), failed: false }
+      : { text: strings.importFailed, failed: true }
   }
 
   /** null starts a blank document, an id starts a copy of that template. */
@@ -79,6 +113,26 @@
     <p class="no-print warning" role="alert">{strings.saveFailed}</p>
   {/if}
 
+  {#if importReport}
+    <p
+      class="no-print report"
+      class:warning={importReport.failed}
+      role={importReport.failed ? 'alert' : 'status'}
+    >
+      {importReport.text}
+    </p>
+  {/if}
+
+  <!-- Hidden: the visible control is the Importieren button in the document
+       list, which reaches this input rather than growing its own file chrome. -->
+  <input
+    bind:this={fileInput}
+    type="file"
+    class="no-print picker"
+    accept="application/json,.json"
+    onchange={importFile}
+  />
+
   {#if view === 'documents'}
     <DocumentList
       documents={store.documents}
@@ -91,6 +145,10 @@
       ondelete={remove}
       ondeletetemplate={removeTemplate}
       onmanagelists={() => openLists()}
+      onexport={exportDocument}
+      onexporttemplate={exportTemplate}
+      onbackup={() => download(backupEnvelope(store), strings.backupFileName)}
+      onimport={() => fileInput?.click()}
     />
   {:else if currentIndex >= 0}
     <!-- The editor is mounted per document, so the undo history and the custom
@@ -138,8 +196,16 @@
     padding: 1rem;
   }
 
+  .report {
+    color: var(--ink-muted);
+  }
+
   .warning {
     color: #a33;
+  }
+
+  .picker {
+    display: none;
   }
 
   @media print {

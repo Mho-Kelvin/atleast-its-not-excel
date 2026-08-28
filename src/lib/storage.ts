@@ -32,16 +32,25 @@ export function loadStore(): Store {
     localStorage.setItem(BROKEN_KEY, raw)
     return emptyStore()
   }
-  parsed.startTimes = (parsed.startTimes ?? []).map(toStartTime)
+  return normalise(parsed)
+}
+
+/**
+ * Brings a store up to the current shape. Shared with import, so a file written
+ * by an older version goes through the same migrations a stored one does and
+ * there is only ever one place to add the next migration to.
+ */
+export function normalise(store: Store): Store {
+  store.startTimes = (store.startTimes ?? []).map(toStartTime)
   // Templates are younger than the store, so a stored one may be missing
   // entirely. A broken one is dropped on its own rather than binning the store.
-  parsed.templates = Array.isArray(parsed.templates) ? parsed.templates.filter(isDocument) : []
-  for (const document of [...parsed.documents, ...parsed.templates]) {
+  store.templates = Array.isArray(store.templates) ? store.templates.filter(isDocument) : []
+  for (const document of [...store.documents, ...store.templates]) {
     for (const column of document.columns) {
       if ((column.type as string) === 'longText') column.type = 'text'
     }
   }
-  return parsed
+  return store
 }
 
 /**
@@ -71,7 +80,7 @@ function isStore(value: unknown): value is Store {
   return candidate.documents.every(isDocument) && candidate.lists.every(isList)
 }
 
-function isDocument(value: unknown): value is ScheduleDocument {
+export function isDocument(value: unknown): value is ScheduleDocument {
   if (typeof value !== 'object' || value === null) return false
   const candidate = value as Record<string, unknown>
   return (
@@ -84,7 +93,7 @@ function isDocument(value: unknown): value is ScheduleDocument {
   )
 }
 
-function isList(value: unknown): value is SelectList {
+export function isList(value: unknown): value is SelectList {
   if (typeof value !== 'object' || value === null) return false
   const candidate = value as Record<string, unknown>
   return (

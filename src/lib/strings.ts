@@ -1,3 +1,5 @@
+import type { ImportCounts } from './types'
+
 /** Every user-visible string in the app. Nothing German belongs outside this file. */
 export const strings = {
   documentTitleLabel: 'Titel',
@@ -83,6 +85,17 @@ export const strings = {
 
   saveFailed: 'Speichern fehlgeschlagen. Der Speicher des Browsers ist voll.',
 
+  exportDocument: 'Dokument exportieren',
+  exportTemplate: 'Vorlage exportieren',
+  exportLists: 'Listen exportieren',
+  exportBackup: 'Sicherung',
+  importFile: 'Importieren',
+  importFailed: 'Datei nicht lesbar',
+  /** Stands in for the title of an untitled document in its file name. */
+  exportFallbackName: 'Ohne Titel',
+  listsFileName: 'Listen',
+  backupFileName: 'Sicherung',
+
   columnTypes: {
     text: 'Text',
     select: 'Auswahlliste',
@@ -95,6 +108,21 @@ export const counts = {
   documentShape: (rows: number, columns: number) =>
     `${rows} ${rows === 1 ? 'Zeile' : 'Zeilen'} · ${columns} ${columns === 1 ? 'Spalte' : 'Spalten'}`,
   hiddenColumns: (count: number) => `${count} ${count === 1 ? 'Spalte' : 'Spalten'} ausgeblendet`,
+  imported: (imported: ImportCounts) => {
+    const parts = [
+      count(imported.documents, 'Dokument', 'Dokumente'),
+      count(imported.templates, 'Vorlage', 'Vorlagen'),
+      count(imported.lists, 'Liste', 'Listen'),
+      count(imported.startTimes, 'Startzeit', 'Startzeiten'),
+    ].filter((part) => part !== '')
+    if (parts.length === 0) return 'Nichts importiert'
+    return `${parts.join(', ')} importiert`
+  },
+}
+
+function count(amount: number, one: string, many: string): string {
+  if (amount === 0) return ''
+  return `${amount} ${amount === 1 ? one : many}`
 }
 
 /**
