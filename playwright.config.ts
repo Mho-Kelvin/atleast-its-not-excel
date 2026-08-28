@@ -4,6 +4,7 @@ const baseURL = 'http://localhost:4173'
 
 export default defineConfig({
   testDir: './e2e',
+  reporter: [['list'], ['html', { open: 'never' }]],
   use: { baseURL },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

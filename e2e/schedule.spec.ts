@@ -11,6 +11,27 @@ function textInput(page: Page, rowNumber: number) {
     .first()
 }
 
+/**
+ * svelte-dnd-action reads the pointer on its own interval, so a press, move and
+ * release finished inside one tick drops the item back where it started. The
+ * target is measured after the lift for the same reason: lifting the item out of
+ * the flow moves everything past it one slot along.
+ */
+async function dragTo(page: Page, handle: string, target: string): Promise<void> {
+  const from = (await page.locator(handle).boundingBox())!
+  const lift = { x: from.x + from.width / 2, y: from.y + from.height / 2 }
+
+  await page.mouse.move(lift.x, lift.y)
+  await page.mouse.down()
+  await page.mouse.move(lift.x, lift.y + 10, { steps: 5 })
+  await page.waitForTimeout(150)
+
+  const to = (await page.locator(target).boundingBox())!
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 5 })
+  await page.waitForTimeout(150)
+  await page.mouse.up()
+}
+
 async function addColumn(page: Page, name: string): Promise<void> {
   await page.getByTitle('Spalte hinzufügen').click()
   await page.getByLabel('Spaltenname').fill(name)
@@ -327,16 +348,7 @@ test('columns can be dragged into a new order', async ({ page }) => {
   const headings = page.locator('thead .column-name')
   await expect(headings).toHaveText(['Uhrzeit', 'Programmpunkt', 'Verantwortlich'])
 
-  const handle = page.locator('thead th:nth-child(5) .drag-handle')
-  const target = page.locator('thead th:nth-child(4)')
-  const from = (await handle.boundingBox())!
-  const to = (await target.boundingBox())!
-
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
-  await page.screenshot({ path: 'test-results/column-drag-midway.png' })
-  await page.mouse.up()
+  await dragTo(page, 'thead th:nth-child(5) .drag-handle', 'thead th:nth-child(4)')
 
   await expect(headings).toHaveText(['Uhrzeit', 'Verantwortlich', 'Programmpunkt'])
 })
@@ -345,15 +357,7 @@ test('dragging the start time moves the duration column with it', async ({ page 
   await openNewDocument(page)
   await page.fill(durationInput(1), '15')
 
-  const handle = page.locator('thead th:nth-child(2) .drag-handle')
-  const target = page.locator('thead th:nth-child(5)')
-  const from = (await handle.boundingBox())!
-  const to = (await target.boundingBox())!
-
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
-  await page.mouse.up()
+  await dragTo(page, 'thead th:nth-child(2) .drag-handle', 'thead th:nth-child(5)')
 
   // The pair moved together and stayed adjacent, time first.
   const headings = page.locator('thead th')
@@ -380,15 +384,7 @@ test('one column drag costs one undo step', async ({ page }) => {
   await openNewDocument(page)
 
   const headings = page.locator('thead .column-name')
-  const handle = page.locator('thead th:nth-child(5) .drag-handle')
-  const target = page.locator('thead th:nth-child(4)')
-  const from = (await handle.boundingBox())!
-  const to = (await target.boundingBox())!
-
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
-  await page.mouse.up()
+  await dragTo(page, 'thead th:nth-child(5) .drag-handle', 'thead th:nth-child(4)')
   await expect(headings).toHaveText(['Uhrzeit', 'Verantwortlich', 'Programmpunkt'])
 
   await page.getByRole('button', { name: 'Rückgängig' }).click()
@@ -402,15 +398,7 @@ test('rows can be dragged into a new order', async ({ page }) => {
   await textInput(page, 1).fill('Erste')
   await textInput(page, 2).fill('Zweite')
 
-  const handle = page.locator('tbody tr:nth-child(1) .drag-handle')
-  const target = page.locator('tbody tr:nth-child(2)')
-  const from = (await handle.boundingBox())!
-  const to = (await target.boundingBox())!
-
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height, { steps: 10 })
-  await page.mouse.up()
+  await dragTo(page, 'tbody tr:nth-child(1) .drag-handle', 'tbody tr:nth-child(2)')
 
   await expect(textInput(page, 1)).toHaveValue('Zweite')
   await expect(textInput(page, 2)).toHaveValue('Erste')
@@ -423,15 +411,7 @@ test('header fields can be dragged into a new order', async ({ page }) => {
   await labels.nth(0).fill('Ort')
   await labels.nth(1).fill('Datum')
 
-  const handle = page.locator('.field:nth-child(1) .drag-handle')
-  const target = page.locator('.field:nth-child(2)')
-  const from = (await handle.boundingBox())!
-  const to = (await target.boundingBox())!
-
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height, { steps: 10 })
-  await page.mouse.up()
+  await dragTo(page, '.field:nth-child(1) .drag-handle', '.field:nth-child(2)')
 
   await expect(labels.nth(0)).toHaveValue('Datum')
   await expect(labels.nth(1)).toHaveValue('Ort')
