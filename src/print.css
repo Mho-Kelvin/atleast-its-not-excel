@@ -42,8 +42,14 @@
   display: none !important;
 }
 
-/* Stands in for a dropdown, which prints its value on one line however long. */
-.print-probe .probe-value {
+/* Stands in for a dropdown, which prints its value on one line however long.
+   Both rules need !important to beat the component's own scoped selector. */
+.print-probe select {
+  display: none !important;
+}
+
+.print-probe .print-value {
+  display: inline !important;
   white-space: pre;
 }
 

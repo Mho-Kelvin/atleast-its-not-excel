@@ -124,6 +124,7 @@
             {/each}
             <option value={CUSTOM_VALUE}>{strings.customValue}</option>
           </select>
+          <span class="print-value">{row.cells[column.id] ?? ''}</span>
         {:else}
           <CellField
             bind:value={row.cells[column.id]}
@@ -268,6 +269,10 @@
     outline-offset: 1px;
   }
 
+  .print-value {
+    display: none;
+  }
+
   @media print {
     /* The draft row is an offer to type, not a line of the schedule. */
     .draft {
@@ -279,10 +284,16 @@
       min-width: 0;
     }
 
-    /* Print strips the dropdown's chrome, and its inset goes with it: without
-       the pull-back the value would sit left of the cell's padding. */
+    /* A select sized to its content reserves room for its widest option, which
+       the page never sees, so it is hidden and the plain-text span prints the
+       chosen value instead. */
     td select {
-      margin-left: 0;
+      display: none;
+    }
+
+    .print-value {
+      display: inline;
+      white-space: pre;
     }
   }
 </style>

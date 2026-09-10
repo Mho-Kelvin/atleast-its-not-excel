@@ -10,7 +10,7 @@ import { fitToPage, type Measured, type PrintFit } from './printFit'
  * same table the printer gets. `.print-probe` in print.css only repeats the
  * handful of overrides those components declare for print.
  */
-const CONTROLS = 'textarea, select'
+const CONTROLS = 'textarea'
 
 function probeContainer(): HTMLElement {
   const probe = document.createElement('div')
@@ -20,29 +20,14 @@ function probeContainer(): HTMLElement {
 }
 
 /**
- * Print draws a control as its text. `cloneNode` is no help here: it copies a
- * textarea's markup and a select's `selected` attribute, neither of which is the
- * value on screen, so the values are taken from the live table. Source and copy
- * still match one for one at this point, which is what lines the two lists up.
+ * Print draws a textarea as its text. `cloneNode` is no help here: it copies a
+ * textarea's markup, not its value, so dropping the clone and leaving the
+ * cell's own `::after` is what carries the text into the measurement.
  */
-function flattenControls(source: HTMLElement, copy: HTMLElement): void {
-  const originals = source.querySelectorAll(CONTROLS)
-  const copies = copy.querySelectorAll(CONTROLS)
-
-  originals.forEach((control, index) => {
-    const clone = copies[index]
-    if (control instanceof HTMLSelectElement) {
-      // A select never wraps, so its value sets a floor for the column's width.
-      const value = document.createElement('span')
-      value.className = 'probe-value'
-      value.textContent = control.selectedOptions[0]?.text ?? ''
-      clone.replaceWith(value)
-      return
-    }
-    // The cell's own ::after already carries the text and wraps it the way the
-    // textarea does, so dropping the field leaves the width unchanged.
-    clone.remove()
-  })
+function flattenControls(copy: HTMLElement): void {
+  // The cell's own ::after already carries the text and wraps it the way the
+  // textarea does, so dropping the field leaves the width unchanged.
+  for (const node of copy.querySelectorAll(CONTROLS)) node.remove()
 }
 
 function measureOnce(
@@ -57,7 +42,7 @@ function measureOnce(
   // wrapping exactly where the paper would. The clone brings the live table's
   // value along, which is last run's answer, not this attempt's.
   copy.style.setProperty('--header-wrap', wrapHeaders ? 'normal' : 'nowrap')
-  flattenControls(table, copy)
+  flattenControls(copy)
   for (const node of copy.querySelectorAll('.no-print')) node.remove()
   // Last run's guesses, which this run is free to take back.
   for (const node of copy.querySelectorAll('.print-auto-hidden')) {

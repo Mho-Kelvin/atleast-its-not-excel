@@ -244,6 +244,45 @@ test('a table that fits keeps its headings on one line', async ({ page }) => {
   expect(await headerWrap(page)).toBe('nowrap')
 })
 
+test('a dropdown prints its chosen value, not room for its longest one', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Auswahllisten' }).click()
+  await page.getByLabel('Name der Liste').fill('Räume')
+  await page.getByRole('button', { name: 'Neue Liste' }).click()
+  await page.getByLabel('Wert: Räume').fill('Saal')
+  await page.getByLabel('Wert: Räume').nth(1).fill('Der allergrößte Saal im ganzen Gebäude hier')
+  await page.getByRole('button', { name: 'Schließen' }).click()
+
+  await startBlankDocument(page)
+  for (let i = 0; i < 3; i++) {
+    await page.getByTitle('Spalte hinzufügen').click()
+    await page.getByLabel('Spaltenname').fill(`Ort ${i + 1}`)
+    await page.getByLabel('Typ').selectOption('select')
+    await page.getByLabel('Liste', { exact: true }).selectOption({ label: 'Räume' })
+    await page.keyboard.press('Escape')
+  }
+
+  const selects = page.locator('tbody tr:nth-child(1) td[data-column-type="select"] select')
+  for (let i = 0; i < 3; i++) {
+    await selects.nth(i).selectOption('Saal')
+  }
+
+  // 210mm at 96dpi: the width Chrome actually prints onto.
+  await page.setViewportSize({ width: 794, height: 1123 })
+  await page.emulateMedia({ media: 'print' })
+
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(794)
+
+  await expect(
+    page.locator('tbody tr:nth-child(1) td[data-column-type="select"] .print-value').first(),
+  ).toHaveText('Saal')
+  await expect(
+    page.locator('tbody tr:nth-child(1) td[data-column-type="select"] select').first(),
+  ).toBeHidden()
+})
+
 test('the page renders onto A4 as a PDF', async ({ page }) => {
   await openNewDocument(page)
   await page.fill(durationInput(1), '15')
@@ -503,8 +542,9 @@ test('a chosen value starts where a typed one does', async ({ page }) => {
 
   await page.emulateMedia({ media: 'print' })
 
+  // The select itself is hidden in print; the plain-text span takes its place.
   const printedTyped = await inset('td[data-column-type="text"] textarea')
-  const printedChosen = await inset('td[data-column-type="select"] select')
+  const printedChosen = await inset('td[data-column-type="select"] .print-value')
   expect(Math.abs(printedChosen - printedTyped)).toBeLessThan(1)
 })
 
