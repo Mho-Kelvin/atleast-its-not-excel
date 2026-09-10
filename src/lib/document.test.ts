@@ -11,6 +11,7 @@ import {
   ensureDrafts,
   findDurationColumn,
   removeColumn,
+  setCellStyle,
 } from './document'
 
 describe('createDocument', () => {
@@ -88,6 +89,60 @@ describe('addColumn and removeColumn', () => {
     removeColumn(document, column.id)
     expect(column.id in document.rows[0].cells).toBe(false)
   })
+
+  it('drops the removed column out of the row styles too', () => {
+    const document = createDocument('Ablauf')
+    const column = createColumn('Ort', 'text')
+    addColumn(document, column)
+    setCellStyle(document.rows[0], column.id, { bold: true })
+
+    removeColumn(document, column.id)
+
+    expect(document.rows[0].styles?.[column.id]).toBeUndefined()
+    expect(document.rows[0].styles).toBeUndefined()
+  })
+})
+
+describe('setCellStyle', () => {
+  it('stores a style on the row', () => {
+    const document = createDocument('Ablauf')
+    const columnId = document.columns[0].id
+
+    setCellStyle(document.rows[0], columnId, { bold: true })
+
+    expect(document.rows[0].styles).toEqual({ [columnId]: { bold: true } })
+  })
+
+  it('drops the entry and the styles object once it is undefined', () => {
+    const document = createDocument('Ablauf')
+    const columnId = document.columns[0].id
+    setCellStyle(document.rows[0], columnId, { bold: true })
+
+    setCellStyle(document.rows[0], columnId, undefined)
+
+    expect(document.rows[0].styles).toBeUndefined()
+  })
+
+  it('drops the entry when the style is empty', () => {
+    const document = createDocument('Ablauf')
+    const columnId = document.columns[0].id
+    setCellStyle(document.rows[0], columnId, { bold: true })
+
+    setCellStyle(document.rows[0], columnId, {})
+
+    expect(document.rows[0].styles).toBeUndefined()
+  })
+
+  it('leaves another column style alone', () => {
+    const document = createDocument('Ablauf')
+    const [firstId, secondId] = document.columns.map((column) => column.id)
+    setCellStyle(document.rows[0], firstId, { bold: true })
+    setCellStyle(document.rows[0], secondId, { italic: true })
+
+    setCellStyle(document.rows[0], firstId, undefined)
+
+    expect(document.rows[0].styles).toEqual({ [secondId]: { italic: true } })
+  })
 })
 
 describe('duplicateDocument', () => {
@@ -126,6 +181,18 @@ describe('duplicateDocument', () => {
     expect(copy.hideTimeInPrint).toBe(true)
     expect(copy.columns[1].hideInPrint).toBe(true)
     expect(copy.columns[2].hideInPrint).toBeUndefined()
+  })
+
+  it('remaps row styles onto the copied column ids and copies the time style', () => {
+    const source = createDocument('Ablauf')
+    const columnId = source.columns[0].id
+    setCellStyle(source.rows[0], columnId, { bold: true })
+    source.timeStyle = { colour: '#a81f30' }
+
+    const copy = duplicateDocument(source, 'Kopie')
+
+    expect(copy.rows[0].styles).toEqual({ [copy.columns[0].id]: { bold: true } })
+    expect(copy.timeStyle).toEqual({ colour: '#a81f30' })
   })
 
   it('leaves the original untouched when the copy is edited', () => {

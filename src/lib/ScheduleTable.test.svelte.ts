@@ -402,3 +402,49 @@ describe('cell fields', () => {
     expect(document.activeElement).toBe(last)
   })
 })
+
+describe('cell style', () => {
+  it('renders the effective style, cell winning over the column preset', async () => {
+    const plan = renderTable()
+    const column = plan.columns.find((it) => it.title === 'Programmpunkt')!
+    column.style = { bold: true, colour: '#a81f30' }
+    plan.rows[0].styles = { [column.id]: { bold: false, italic: true } }
+    await Promise.resolve()
+
+    const cell = document.querySelector(
+      `td[data-row-id="${plan.rows[0].id}"][data-column-id="${column.id}"]`,
+    ) as HTMLElement
+    expect(cell.classList).toContain('italic')
+    expect(cell.classList).not.toContain('bold')
+    expect(cell.getAttribute('style')).toContain('--cell-colour: #a81f30')
+  })
+
+  it('renders the time style on the Uhrzeit cell', async () => {
+    const plan = renderTable()
+    plan.timeStyle = { bold: true }
+    await Promise.resolve()
+
+    const timeCell = document.querySelector('tbody .time-column') as HTMLElement
+    expect(timeCell.classList).toContain('bold')
+  })
+
+  it('sets a preset through the column panel, applied to every cell of that column', async () => {
+    const plan = renderTable()
+    const column = plan.columns.find((it) => it.title === 'Programmpunkt')!
+
+    await openSettings('Programmpunkt')
+    await fireEvent.click(screen.getByRole('button', { name: 'Fett' }))
+
+    expect(column.style).toMatchObject({ bold: true })
+  })
+
+  it('sets the computed Uhrzeit style through the start-time settings', async () => {
+    const plan = renderTable()
+
+    await openSettings('Uhrzeit')
+    const boldButtons = screen.getAllByRole('button', { name: 'Fett' })
+    await fireEvent.click(boldButtons[0])
+
+    expect(plan.timeStyle).toMatchObject({ bold: true })
+  })
+})

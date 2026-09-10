@@ -3,12 +3,36 @@ import { describe, expect, it, vi } from 'vitest'
 import Editor from './Editor.svelte'
 import { createDocument } from './document'
 
+/**
+ * `plan` is bound through a getter/setter pair, not passed as a plain value:
+ * undo and redo replace the whole document, and only the accessor pair
+ * carries that reassignment back out to the test.
+ */
 function renderEditor(isTemplate = false) {
-  const plan = $state(createDocument('Ablauf'))
+  let plan = $state(createDocument('Ablauf'))
   render(Editor, {
-    props: { plan, lists: [], startTimes: [], isTemplate, onback: () => {}, onsaveastemplate },
+    props: {
+      get plan() {
+        return plan
+      },
+      set plan(value: typeof plan) {
+        plan = value
+      },
+      lists: [],
+      startTimes: [],
+      isTemplate,
+      onback: () => {},
+      onsaveastemplate,
+    },
   })
-  return plan
+  return () => plan
+}
+
+function textCell(plan: ReturnType<typeof createDocument>): HTMLTextAreaElement {
+  const row = plan.rows[0]
+  const column = plan.columns.find((entry) => entry.type === 'text')!
+  const cell = document.querySelector(`td[data-row-id="${row.id}"][data-column-id="${column.id}"]`)!
+  return cell.querySelector('textarea') as HTMLTextAreaElement
 }
 
 const onsaveastemplate = vi.fn()
@@ -19,17 +43,17 @@ function button(name: string): HTMLButtonElement {
 
 describe('the Beginn line', () => {
   it('is dropped from print once its checkbox is cleared', async () => {
-    const plan = renderEditor()
+    const getPlan = renderEditor()
     const printIt = screen.getByLabelText('Beginn drucken') as HTMLInputElement
     expect(printIt.checked).toBe(true)
     expect(document.querySelector('p.start')?.classList).not.toContain('print-hidden')
 
     await fireEvent.click(printIt)
-    expect(plan.hideStartTimeInPrint).toBe(true)
+    expect(getPlan().hideStartTimeInPrint).toBe(true)
     expect(document.querySelector('p.start')?.classList).toContain('print-hidden')
 
     await fireEvent.click(printIt)
-    expect(plan.hideStartTimeInPrint).toBe(false)
+    expect(getPlan().hideStartTimeInPrint).toBe(false)
     expect(document.querySelector('p.start')?.classList).not.toContain('print-hidden')
   })
 })
@@ -66,5 +90,62 @@ describe('a template in the editor', () => {
 
     await fireEvent.click(button('Als Vorlage speichern'))
     expect(onsaveastemplate).toHaveBeenCalledOnce()
+  })
+})
+
+describe('cell formatting', () => {
+  it('disables the format group until a cell is focused', async () => {
+    const getPlan = renderEditor()
+    expect(button('Fett').disabled).toBe(true)
+
+    textCell(getPlan()).focus()
+    await Promise.resolve()
+
+    expect(button('Fett').disabled).toBe(false)
+  })
+
+  it('clears the focused cell on a click that lands on no cell', async () => {
+    const getPlan = renderEditor()
+    textCell(getPlan()).focus()
+    await Promise.resolve()
+    expect(button('Fett').disabled).toBe(false)
+
+    await fireEvent.click(document.querySelector('.sheet')!)
+    expect(button('Fett').disabled).toBe(true)
+  })
+
+  it('sets bold on the focused cell through the toolbar, and undo removes it again', async () => {
+    const getPlan = renderEditor()
+    const columnId = getPlan().columns.find((entry) => entry.type === 'text')!.id
+    textCell(getPlan()).focus()
+    await Promise.resolve()
+
+    await fireEvent.click(button('Fett'))
+    expect(getPlan().rows[0].styles?.[columnId]).toMatchObject({ bold: true })
+
+    await fireEvent.click(button('Rückgängig'))
+    expect(getPlan().rows[0].styles?.[columnId]).toBeUndefined()
+  })
+
+  it('toggles bold with Ctrl+B in the focused textarea', async () => {
+    const getPlan = renderEditor()
+    const columnId = getPlan().columns.find((entry) => entry.type === 'text')!.id
+    const field = textCell(getPlan())
+    field.focus()
+    await Promise.resolve()
+
+    await fireEvent.keyDown(field, { key: 'b', ctrlKey: true })
+    expect(getPlan().rows[0].styles?.[columnId]).toMatchObject({ bold: true })
+  })
+
+  it('removes the style entry through the reset button', async () => {
+    const getPlan = renderEditor()
+    textCell(getPlan()).focus()
+    await Promise.resolve()
+
+    await fireEvent.click(button('Fett'))
+    await fireEvent.click(button('Formatierung zurücksetzen'))
+
+    expect(getPlan().rows[0].styles).toBeUndefined()
   })
 })

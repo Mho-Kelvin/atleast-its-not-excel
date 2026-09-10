@@ -8,7 +8,7 @@ const BROKEN_KEY = 'atleast-its-not-excel/v1-broken'
 const LEGACY_STORAGE_KEY = 'tobias-tool/v1'
 
 export function emptyStore(): Store {
-  return { documents: [], templates: [], lists: [], startTimes: [] }
+  return { documents: [], templates: [], lists: [], startTimes: [], recentColours: [] }
 }
 
 /**
@@ -42,6 +42,7 @@ export function loadStore(): Store {
  */
 export function normalise(store: Store): Store {
   store.startTimes = (store.startTimes ?? []).map(toStartTime)
+  store.recentColours = store.recentColours ?? []
   // Templates are younger than the store, so a stored one may be missing
   // entirely. A broken one is dropped on its own rather than binning the store.
   store.templates = Array.isArray(store.templates) ? store.templates.filter(isDocument) : []

@@ -233,6 +233,7 @@
               startTime={startTimes[rowIndex]}
               draft={rowIndex === plan.rows.length - 1 && isRowEmpty(row)}
               hideTimeInPrint={plan.hideTimeInPrint}
+              timeStyle={plan.timeStyle}
               {autoHidden}
               isCustomCell={customCells.is}
               onchoose={customCells.choose}

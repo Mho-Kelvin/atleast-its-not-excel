@@ -1,13 +1,17 @@
 <script lang="ts">
+  import { toggleProperty } from './cellStyle'
+  import { ensureDrafts, setCellStyle } from './document'
+  import { createFocusedCell } from './focusedCell.svelte'
+  import FormatControls from './FormatControls.svelte'
   import HeaderFieldsEditor from './HeaderFieldsEditor.svelte'
   import Icon from './Icon.svelte'
   import ScheduleTable from './ScheduleTable.svelte'
-  import { ensureDrafts } from './document'
   import StartTimeField from './StartTimeField.svelte'
   import { printFitNotice, PRINTS_AS_IS, type PrintFit } from './printFit'
+  import { recentColours } from './recentColours.svelte'
   import { strings } from './strings'
   import { createUndoTracker } from './undoTracker.svelte'
-  import type { ScheduleDocument, SelectList, StartTime } from './types'
+  import type { CellStyle, ScheduleDocument, SelectList, StartTime } from './types'
 
   let {
     plan = $bindable(),
@@ -25,6 +29,31 @@
     onback: () => void
     onsaveastemplate: () => void
   } = $props()
+
+  const focused = createFocusedCell()
+  const focusedRow = $derived(plan.rows.find((row) => row.id === focused.rowId))
+  const focusedColumn = $derived(plan.columns.find((column) => column.id === focused.columnId))
+
+  function cellStyle(): CellStyle | undefined {
+    return focusedRow && focusedColumn ? focusedRow.styles?.[focusedColumn.id] : undefined
+  }
+
+  function setStyle(value: CellStyle | undefined): void {
+    if (focusedRow && focusedColumn) setCellStyle(focusedRow, focusedColumn.id, value)
+  }
+
+  function onSheetKeydown(event: KeyboardEvent): void {
+    if (!event.ctrlKey && !event.metaKey) return
+    if (!focusedRow || !focusedColumn) return
+
+    const key = event.key.toLowerCase()
+    const property = key === 'b' ? 'bold' : key === 'i' ? 'italic' : undefined
+    if (property === undefined) return
+
+    event.preventDefault()
+    const hasColumnPreset = focusedColumn.style?.[property] === true
+    setStyle(toggleProperty(cellStyle(), property, hasColumnPreset))
+  }
 
   const titlePlaceholder = $derived(
     isTemplate ? strings.templateTitlePlaceholder : strings.documentTitlePlaceholder,
@@ -112,6 +141,14 @@
     </button>
   </span>
 
+  <FormatControls
+    bind:style={cellStyle, setStyle}
+    inherited={focusedColumn?.style}
+    bind:recentColours={recentColours.list}
+    disabled={!focusedRow || !focusedColumn}
+    onreset={() => setStyle(undefined)}
+  />
+
   <span class="saved" class:visible={saved}>
     <Icon name="check" size={16} />
     {strings.saved}
@@ -145,7 +182,15 @@
   </span>
 </div>
 
-<article class="sheet">
+<!-- Not interactive itself: it only catches focus and keyboard events
+     bubbling up from the cells inside it. -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<article
+  class="sheet"
+  onfocusin={focused.onFocusIn}
+  onclick={focused.onClick}
+  onkeydown={onSheetKeydown}
+>
   <header>
     <!-- The label is carried by aria alone: a document's title reads as a title,
          not as a form field, and it prints as the heading it looks like. -->

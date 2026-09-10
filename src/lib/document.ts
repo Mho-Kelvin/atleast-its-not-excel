@@ -1,4 +1,5 @@
-import type { Column, ColumnType, HeaderField, Row, ScheduleDocument } from './types'
+import { isEmptyStyle } from './cellStyle'
+import type { CellStyle, Column, ColumnType, HeaderField, Row, ScheduleDocument } from './types'
 
 function newId(): string {
   return crypto.randomUUID()
@@ -62,7 +63,25 @@ export function addColumn(document: ScheduleDocument, column: Column): void {
 
 export function removeColumn(document: ScheduleDocument, columnId: string): void {
   document.columns = document.columns.filter((column) => column.id !== columnId)
-  for (const row of document.rows) delete row.cells[columnId]
+  for (const row of document.rows) {
+    delete row.cells[columnId]
+    setCellStyle(row, columnId, undefined)
+  }
+}
+
+/**
+ * Deletes the entry when the style is undefined or empty, and drops `row.styles`
+ * itself once it ends up empty, so a row with no overrides carries no property.
+ */
+export function setCellStyle(row: Row, columnId: string, style: CellStyle | undefined): void {
+  if (style === undefined || isEmptyStyle(style)) {
+    if (!row.styles) return
+    delete row.styles[columnId]
+    if (Object.keys(row.styles).length === 0) delete row.styles
+    return
+  }
+  row.styles ??= {}
+  row.styles[columnId] = style
 }
 
 export function createHeaderField(label = ''): HeaderField {
@@ -87,7 +106,16 @@ export function duplicateDocument(source: ScheduleDocument, title: string): Sche
       const newColumnId = newColumnIds.get(oldColumnId)
       if (newColumnId !== undefined) cells[newColumnId] = value
     }
-    return { id: newId(), cells }
+
+    let styles: Record<string, CellStyle> | undefined
+    for (const [oldColumnId, style] of Object.entries(row.styles ?? {})) {
+      const newColumnId = newColumnIds.get(oldColumnId)
+      if (newColumnId === undefined) continue
+      styles ??= {}
+      styles[newColumnId] = style
+    }
+
+    return { id: newId(), cells, styles }
   })
 
   return {
@@ -101,6 +129,7 @@ export function duplicateDocument(source: ScheduleDocument, title: string): Sche
     rows,
     timeTitle: source.timeTitle,
     hideTimeInPrint: source.hideTimeInPrint,
+    timeStyle: source.timeStyle,
     updatedAt: Date.now(),
   }
 }

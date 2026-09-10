@@ -85,6 +85,22 @@ export const strings = {
 
   saveFailed: 'Speichern fehlgeschlagen. Der Speicher des Browsers ist voll.',
 
+  formatGroup: 'Formatierung',
+  formatBold: 'Fett',
+  formatItalic: 'Kursiv',
+  formatColour: 'Textfarbe',
+  paletteColours: {
+    '#1f3a63': 'Tinte',
+    '#a81f30': 'Rot',
+    '#1e7a3c': 'Grün',
+    '#b45309': 'Orange',
+    '#5b6470': 'Grau',
+  } as Record<string, string>,
+  formatRecentColour: 'Zuletzt verwendete Farbe',
+  formatNoColour: 'Keine Farbe',
+  formatMoreColours: 'Weitere Farbe …',
+  formatReset: 'Formatierung zurücksetzen',
+
   exportDocument: 'Dokument exportieren',
   exportTemplate: 'Vorlage exportieren',
   exportLists: 'Listen exportieren',

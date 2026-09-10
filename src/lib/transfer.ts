@@ -51,7 +51,12 @@ export function listsEnvelope(store: Store): Envelope {
 }
 
 export function backupEnvelope(store: Store): Envelope {
-  return envelope({ ...store })
+  return envelope({
+    documents: store.documents,
+    templates: store.templates,
+    lists: store.lists,
+    startTimes: store.startTimes,
+  })
 }
 
 export function fileName(base: string, on = new Date()): string {
@@ -91,6 +96,8 @@ export function importInto(store: Store, text: string): ImportResult {
     lists: asArray(parsed.lists).filter(isList),
     // The trailing empty entry is the draft the dialog types into, not data.
     startTimes: asArray(parsed.startTimes).filter(isFilledStartTime),
+    // A file never carries this: it is never exported and stays local to the store.
+    recentColours: [],
   })
 
   return { ok: true, counts: merge(store, incoming) }

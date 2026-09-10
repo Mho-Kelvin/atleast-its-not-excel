@@ -103,6 +103,20 @@ describe('loadStore', () => {
     expect(loadStore().documents[0].columns[1].type).toBe('text')
   })
 
+  it('carries recentColours through a save and load', () => {
+    const store = emptyStore()
+    store.recentColours = ['#abcdef']
+    saveStore(store)
+
+    expect(loadStore().recentColours).toEqual(['#abcdef'])
+  })
+
+  it('gives a store written before recentColours existed an empty list', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [], lists: [] }))
+
+    expect(loadStore().recentColours).toEqual([])
+  })
+
   it('gives a store written before the templates an empty list', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ documents: [], lists: [] }))
 

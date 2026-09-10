@@ -1,10 +1,12 @@
 <script lang="ts">
   import { dragHandle } from 'svelte-dnd-action'
   import ConfirmDialog from './ConfirmDialog.svelte'
+  import FormatControls from './FormatControls.svelte'
   import Icon from './Icon.svelte'
   import PrintMark from './PrintMark.svelte'
   import { findDurationColumn, removeColumn } from './document'
   import { openLists } from './listsDialog.svelte'
+  import { recentColours } from './recentColours.svelte'
   import { TIME_SLOT } from './slots'
   import { strings } from './strings'
   import type { Column, ColumnType, ScheduleDocument, SelectList } from './types'
@@ -130,6 +132,7 @@
           value={plan.timeTitle ?? ''}
           oninput={(event) => (plan.timeTitle = event.currentTarget.value)}
         />
+        <FormatControls bind:style={plan.timeStyle} bind:recentColours={recentColours.list} />
         <label class="check">
           <input
             type="checkbox"
@@ -149,6 +152,7 @@
           placeholder={strings.columnTypes.duration}
           bind:value={column.title}
         />
+        <FormatControls bind:style={column.style} bind:recentColours={recentColours.list} />
         <label class="check">
           <input
             type="checkbox"
@@ -181,6 +185,10 @@
           <option value={type} disabled={!canBecome(type)}>{strings.columnTypes[type]}</option>
         {/each}
       </select>
+
+      {#if !timeGroup}
+        <FormatControls bind:style={column.style} bind:recentColours={recentColours.list} />
+      {/if}
 
       {#if column.type === 'select'}
         <label for="column-list-{column.id}">{strings.columnListLabel}</label>
@@ -312,6 +320,7 @@
 
   .panel input,
   .panel select {
+    box-sizing: border-box;
     width: 100%;
     border: 1px solid var(--rule);
     border-radius: var(--radius);

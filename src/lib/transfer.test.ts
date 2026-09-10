@@ -69,6 +69,13 @@ describe('envelopes', () => {
     expect(envelope.lists).toHaveLength(1)
     expect(envelope.startTimes).toHaveLength(1)
   })
+
+  it('never carries recentColours, even in a backup', () => {
+    const store = storeWith()
+    store.recentColours = ['#abcdef']
+
+    expect(JSON.stringify(backupEnvelope(store))).not.toContain('recentColours')
+  })
 })
 
 describe('fileName', () => {
@@ -176,6 +183,19 @@ describe('importInto', () => {
     importInto(store, JSON.stringify(documentEnvelope(document)))
 
     expect(store.documents[0].columns[1].type).toBe('text')
+  })
+
+  it('round-trips a document that carries cell styles', () => {
+    const store = emptyStore()
+    const source = createDocument('Ablauf')
+    const columnId = source.columns[0].id
+    source.rows[0].styles = { [columnId]: { bold: true } }
+    source.timeStyle = { colour: '#a81f30' }
+
+    importInto(store, JSON.stringify(documentEnvelope(source)))
+
+    expect(store.documents[0].rows[0].styles).toEqual({ [columnId]: { bold: true } })
+    expect(store.documents[0].timeStyle).toEqual({ colour: '#a81f30' })
   })
 
   it('leaves the draft start time out', () => {

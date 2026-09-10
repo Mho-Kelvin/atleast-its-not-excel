@@ -1,5 +1,13 @@
 export type ColumnType = 'text' | 'select' | 'duration'
 
+/** Whole-cell formatting. Cell text stays a plain string, so inline runs can come later. */
+export interface CellStyle {
+  bold?: boolean
+  italic?: boolean
+  /** Hex like "#a81f30". */
+  colour?: string
+}
+
 export interface Column {
   id: string
   title: string
@@ -8,12 +16,16 @@ export interface Column {
   listId?: string
   /** Absent means the column prints, so documents stored before this existed keep printing. */
   hideInPrint?: boolean
+  /** Preset for the column's cells, never the heading. */
+  style?: CellStyle
 }
 
 export interface Row {
   id: string
   /** Raw text per column id. Parsing happens on read, never on store. */
   cells: Record<string, string>
+  /** Per column id, overrides the column's style preset per property. */
+  styles?: Record<string, CellStyle>
 }
 
 export interface SelectList {
@@ -53,6 +65,8 @@ export interface ScheduleDocument {
   /** The start-time cell is not a column, so its name and print flag live here. */
   timeTitle?: string
   hideTimeInPrint?: boolean
+  /** The computed Uhrzeit cells. No per-row override: there is nothing to focus there. */
+  timeStyle?: CellStyle
   updatedAt: number
 }
 
@@ -71,4 +85,6 @@ export interface Store {
   lists: SelectList[]
   /** The times the start-time field offers. Fixed: it is never attached to a column, never deleted. */
   startTimes: StartTime[]
+  /** Max 3, newest first, colours outside PALETTE only. Persisted, never exported. */
+  recentColours: string[]
 }

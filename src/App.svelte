@@ -5,6 +5,7 @@
   import TemplatePicker from './lib/TemplatePicker.svelte'
   import { createDocument, duplicateDocument } from './lib/document'
   import { closeLists, listsDialog, openLists } from './lib/listsDialog.svelte'
+  import { recentColours } from './lib/recentColours.svelte'
   import { loadStore, saveStore } from './lib/storage'
   import { counts, strings } from './lib/strings'
   import {
@@ -19,7 +20,9 @@
   /** Which of the store's two drawers the editor is working in. */
   type Drawer = 'documents' | 'templates'
 
-  let store = $state(loadStore())
+  const loaded = loadStore()
+  let store = $state(loaded)
+  recentColours.list = loaded.recentColours
   let view = $state<View>('documents')
   let drawer = $state<Drawer>('documents')
   let currentId = $state<string | null>(null)
@@ -37,6 +40,10 @@
   }
 
   $effect(persist)
+
+  $effect(() => {
+    store.recentColours = recentColours.list
+  })
 
   function open(id: string, from: Drawer = 'documents'): void {
     drawer = from

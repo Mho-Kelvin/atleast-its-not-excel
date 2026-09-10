@@ -2,6 +2,7 @@
   import { dragHandle } from 'svelte-dnd-action'
   import CellField from './CellField.svelte'
   import Icon from './Icon.svelte'
+  import { effectiveStyle, styleVars } from './cellStyle'
   import { parseDuration } from './duration'
   import { CUSTOM_VALUE, listValues } from './lists'
   import { formatTimeOfDay } from './schedule'
@@ -13,7 +14,7 @@
     type HeaderSlot,
   } from './slots'
   import { strings } from './strings'
-  import type { Column, Row, SelectList } from './types'
+  import type { CellStyle, Column, Row, SelectList } from './types'
 
   let {
     row,
@@ -22,6 +23,7 @@
     startTime,
     draft,
     hideTimeInPrint,
+    timeStyle,
     autoHidden,
     isCustomCell,
     onchoose,
@@ -35,6 +37,8 @@
     /** The last row, still empty: an offer to type, so it carries no delete. */
     draft: boolean
     hideTimeInPrint: boolean | undefined
+    /** The computed Uhrzeit cells' style; no per-row override. */
+    timeStyle: CellStyle | undefined
     /** Slots the page took away, because the table was too wide to print whole. */
     autoHidden: readonly string[]
     isCustomCell: (row: Row, column: Column, value: string) => boolean
@@ -83,10 +87,14 @@
         </span>
       </td>
     {:else if slot.id === TIME_SLOT.id}
+      {@const timeCellStyle = effectiveStyle(timeStyle)}
       <td
         class="time-column group-start"
         class:print-hidden={hideTimeInPrint}
         class:print-auto-hidden={autoHidden.includes(TIME_SLOT.id)}
+        class:bold={timeCellStyle.bold}
+        class:italic={timeCellStyle.italic}
+        style={styleVars(timeCellStyle)}
       >
         {startTime === undefined ? '' : formatTimeOfDay(startTime)}
       </td>
@@ -106,11 +114,17 @@
       </td>
     {:else}
       {@const column = asColumn(slot)}
+      {@const cellStyle = effectiveStyle(column.style, row.styles?.[column.id])}
       <td
+        data-row-id={row.id}
+        data-column-id={column.id}
         data-column-type={column.type}
         class:group-end={column.type === 'duration'}
         class:print-hidden={column.hideInPrint}
         class:print-auto-hidden={autoHidden.includes(column.id)}
+        class:bold={cellStyle.bold}
+        class:italic={cellStyle.italic}
+        style={styleVars(cellStyle)}
         onclick={focusField}
       >
         {#if column.type === 'select' && !isCustomCell(row, column, row.cells[column.id] ?? '')}
@@ -151,7 +165,16 @@
     vertical-align: top;
     /* One square of the ruled sheet, so the rows sit on the grid behind them. */
     height: var(--square);
+    color: var(--cell-colour, inherit);
     transition: background var(--duration);
+  }
+
+  td.bold {
+    font-weight: 700;
+  }
+
+  td.italic {
+    font-style: italic;
   }
 
   td[data-column-type='text'],
@@ -179,7 +202,7 @@
     width: 6ch;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
-    color: var(--ink-muted);
+    color: var(--cell-colour, var(--ink-muted));
   }
 
   /* The start time and the duration it is computed from are one group. The
