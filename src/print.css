@@ -27,6 +27,11 @@
   font-size: 10pt;
 }
 
+/* A4 landscape minus the same margin. */
+.print-probe.landscape {
+  width: 273mm;
+}
+
 .print-probe td {
   min-width: 0 !important;
 }

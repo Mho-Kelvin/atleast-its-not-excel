@@ -12,9 +12,9 @@ import { fitToPage, type Measured, type PrintFit } from './printFit'
  */
 const CONTROLS = 'textarea'
 
-function probeContainer(): HTMLElement {
+function probeContainer(landscape: boolean): HTMLElement {
   const probe = document.createElement('div')
-  probe.className = 'print-probe'
+  probe.className = landscape ? 'print-probe landscape' : 'print-probe'
   probe.setAttribute('aria-hidden', 'true')
   return probe
 }
@@ -34,8 +34,9 @@ function measureOnce(
   table: HTMLTableElement,
   hidden: readonly number[],
   wrapHeaders: boolean,
+  landscape: boolean,
 ): Measured {
-  const probe = probeContainer()
+  const probe = probeContainer(landscape)
   const copy = table.cloneNode(true) as HTMLTableElement
 
   // The same custom property the printed table reads, so the copy is measured
@@ -68,9 +69,10 @@ export function fitTableToPage(
   table: HTMLTableElement,
   ids: readonly string[],
   droppable: readonly number[],
+  landscape: boolean,
 ): PrintFit {
   const plan = fitToPage(droppable, (hidden, wrapHeaders) =>
-    measureOnce(table, hidden, wrapHeaders),
+    measureOnce(table, hidden, wrapHeaders, landscape),
   )
   const hidden: string[] = []
   for (const position of plan.hidden) {

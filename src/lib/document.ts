@@ -130,6 +130,7 @@ export function duplicateDocument(source: ScheduleDocument, title: string): Sche
     timeTitle: source.timeTitle,
     hideTimeInPrint: source.hideTimeInPrint,
     timeStyle: source.timeStyle,
+    landscape: source.landscape,
     updatedAt: Date.now(),
   }
 }

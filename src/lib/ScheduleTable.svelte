@@ -80,6 +80,7 @@
     () => table,
     () => plan.updatedAt,
     () => printableCells(slots, plan),
+    () => plan.landscape === true,
   )
   const autoHidden = $derived(fit.hidden)
   const headerWrap = $derived(fit.value.wrapHeaders ? 'normal' : 'nowrap')

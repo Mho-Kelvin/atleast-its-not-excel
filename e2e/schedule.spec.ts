@@ -206,6 +206,32 @@ test('a table that cannot shrink far enough drops its last column, and takes it 
   await expect(page.locator(`thead th:has-text("${last}")`)).toBeVisible()
 })
 
+test('ticking Querformat widens the page and brings back a column the portrait fit dropped', async ({
+  page,
+}) => {
+  await openNewDocument(page)
+  for (const name of WIDE_COLUMNS) await addColumn(page, name)
+
+  await expect(page.locator('thead .print-auto-hidden')).toHaveCount(1)
+
+  await page.getByLabel('Querformat').check()
+
+  await expect.poll(() => page.locator('thead .print-auto-hidden').count()).toBe(0)
+})
+
+test('a landscape document prints onto a wider-than-tall A4 page', async ({ page }) => {
+  await openNewDocument(page)
+  await page.getByLabel('Querformat').check()
+
+  const pdf = await page.pdf({ preferCSSPageSize: true })
+  const text = pdf.toString('latin1')
+  const mediaBox = text.match(/\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\]/)
+  expect(mediaBox).not.toBeNull()
+
+  const [, llx, lly, urx, ury] = mediaBox!.map(Number)
+  expect(urx - llx).toBeGreaterThan(ury - lly)
+})
+
 /** Reads the wrap the fit settled on, the way printScale reads its zoom. */
 async function headerWrap(page: Page): Promise<string> {
   return page.locator('table').evaluate((table) => table.style.getPropertyValue('--header-wrap'))

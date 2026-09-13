@@ -67,6 +67,8 @@ export interface ScheduleDocument {
   hideTimeInPrint?: boolean
   /** The computed Uhrzeit cells. No per-row override: there is nothing to focus there. */
   timeStyle?: CellStyle
+  /** Absent means portrait, so documents stored before this existed keep printing portrait. */
+  landscape?: boolean
   updatedAt: number
 }
 

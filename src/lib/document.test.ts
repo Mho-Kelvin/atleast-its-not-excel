@@ -183,6 +183,15 @@ describe('duplicateDocument', () => {
     expect(copy.columns[2].hideInPrint).toBeUndefined()
   })
 
+  it('copies the landscape flag', () => {
+    const source = createDocument('Ablauf')
+    source.landscape = true
+
+    const copy = duplicateDocument(source, 'Kopie')
+
+    expect(copy.landscape).toBe(true)
+  })
+
   it('remaps row styles onto the copied column ids and copies the time style', () => {
     const source = createDocument('Ablauf')
     const columnId = source.columns[0].id

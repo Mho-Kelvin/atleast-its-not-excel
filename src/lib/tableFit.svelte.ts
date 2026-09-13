@@ -16,6 +16,7 @@ export function createTableFit(
   table: () => HTMLTableElement | undefined,
   changed: () => number,
   cells: () => { ids: string[]; droppable: number[] },
+  landscape: () => boolean,
 ) {
   let fit = $state<PrintFit>(PRINTS_AS_IS)
 
@@ -25,7 +26,9 @@ export function createTableFit(
       const node = table()
       if (node === undefined || written === '') return
       const { ids, droppable } = cells()
-      fit = fitTableToPage(node, ids, droppable)
+      // landscape() is read here, outside effect tracking, so toggling it alone would not
+      // re-measure; it still does, because the toggle also bumps updatedAt (= changed()).
+      fit = fitTableToPage(node, ids, droppable, landscape())
     }, MEASURE_DELAY)
     return () => clearTimeout(settle)
   })

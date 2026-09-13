@@ -108,6 +108,16 @@
 
 <svelte:window onkeydown={onKeydown} />
 
+<svelte:head>
+  {#if plan.landscape}
+    <style>
+      @page {
+        size: A4 landscape;
+      }
+    </style>
+  {/if}
+</svelte:head>
+
 <div class="toolbar no-print">
   <button type="button" onclick={onback}>
     <Icon name="back" />
@@ -166,6 +176,11 @@
   <!-- One group, so the print button keeps the right edge whether or not the
        template button is beside it. -->
   <span class="end">
+    <label class="landscape">
+      <input type="checkbox" bind:checked={plan.landscape} />
+      {strings.landscape}
+    </label>
+
     <!-- Missing while a template is open: the badge already says so, and the
          button would only make a second copy of it. -->
     {#if !isTemplate}
@@ -236,8 +251,16 @@
 
   .end {
     display: flex;
+    align-items: center;
     gap: var(--space-2);
     margin-left: auto;
+  }
+
+  .landscape {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--ink-muted);
   }
 
   .badge {

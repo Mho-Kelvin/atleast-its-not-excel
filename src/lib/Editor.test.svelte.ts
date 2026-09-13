@@ -58,6 +58,23 @@ describe('the Beginn line', () => {
   })
 })
 
+describe('the Querformat checkbox', () => {
+  it('flips the document and the page style between portrait and landscape', async () => {
+    const getPlan = renderEditor()
+    const landscape = screen.getByLabelText('Querformat') as HTMLInputElement
+    expect(landscape.checked).toBe(false)
+    expect(document.head.textContent).not.toContain('A4 landscape')
+
+    await fireEvent.click(landscape)
+    expect(getPlan().landscape).toBe(true)
+    expect(document.head.textContent).toContain('A4 landscape')
+
+    await fireEvent.click(landscape)
+    expect(getPlan().landscape).toBe(false)
+    expect(document.head.textContent).not.toContain('A4 landscape')
+  })
+})
+
 describe('undo and redo buttons', () => {
   it('are disabled until there is something to undo or redo', async () => {
     renderEditor()

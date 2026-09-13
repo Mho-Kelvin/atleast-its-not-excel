@@ -8,6 +8,7 @@ export const strings = {
   startTimeInvalid: 'Keine gültige Uhrzeit',
   startTimeColumn: 'Uhrzeit',
   durationInvalid: 'Dauer nicht lesbar',
+  landscape: 'Querformat',
 
   removeRow: 'Zeile löschen',
   dragRow: 'Zeile verschieben',
