@@ -118,6 +118,39 @@ test('print media hides the app chrome and keeps the table', async ({ page }) =>
   await expect(page.locator('thead th').nth(2)).toHaveText('Dauer', { useInnerText: true })
 })
 
+test('a long header value prints in full, and an empty label prints as blank space', async ({
+  page,
+}) => {
+  await openNewDocument(page)
+
+  await page.getByLabel('Bezeichnung').first().fill('Ort')
+  const longValue = 'Saal A\n' + 'Bitte den Nebeneingang benutzen. '.repeat(10)
+  await page.getByLabel('Inhalt').first().fill(longValue)
+
+  // Filling only the second draft's value, not its label, leaves a field
+  // with an empty label and a real value, which is the case print has to
+  // keep aligned.
+  await expect(page.getByLabel('Bezeichnung')).toHaveCount(2)
+  await page.getByLabel('Inhalt').nth(1).fill('Nebeneingang')
+
+  await page.emulateMedia({ media: 'print' })
+
+  const longValueField = page.getByLabel('Inhalt').first()
+  const oneLineValueField = page.getByLabel('Inhalt').nth(1)
+  await expect(longValueField).toBeVisible()
+  await expect(oneLineValueField).toBeVisible()
+
+  // Both measured in print, so a print-only font size cannot fake the
+  // comparison: the long value must run to several printed lines, not just
+  // clip to a couple like a short field would.
+  const oneLineHeight = (await oneLineValueField.boundingBox())!.height
+  const longValueHeight = (await longValueField.boundingBox())!.height
+  expect(longValueHeight).toBeGreaterThanOrEqual(oneLineHeight * 2)
+
+  await expect(page.getByLabel('Bezeichnung').nth(1)).toBeHidden()
+  await expect(oneLineValueField).toBeVisible()
+})
+
 test('an unnamed column prints as a blank header', async ({ page }) => {
   await openNewDocument(page)
   await page.getByTitle('Spalte hinzufügen').click()

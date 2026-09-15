@@ -56,6 +56,7 @@
     {:else}
       {@const empty = isHeaderFieldEmpty(field)}
       {@const draft = index === plan.headerFields.length - 1 && empty}
+      {@const unlabelled = field.label.trim() === ''}
       <div class="field" class:empty>
         <span
           use:dragHandle
@@ -69,17 +70,22 @@
         <input
           type="text"
           class="label"
+          class:unlabelled
           aria-label={strings.headerFieldLabel}
           placeholder={strings.headerFieldLabel}
           bind:value={field.label}
         />
-        <input
-          type="text"
-          class="value"
-          aria-label={strings.headerFieldValue}
-          placeholder={strings.headerFieldValue}
-          bind:value={field.value}
-        />
+        <span class="value" data-value={field.value ?? ''}>
+          <textarea
+            rows="1"
+            class="value-input"
+            aria-label={strings.headerFieldValue}
+            placeholder={strings.headerFieldValue}
+            data-lt-active="false"
+            data-gramm="false"
+            bind:value={field.value}
+          ></textarea>
+        </span>
         {#if !draft}
           {@const named =
             field.label.trim() === ''
@@ -107,26 +113,22 @@
   .field {
     display: grid;
     grid-template-columns: 2ch 9rem minmax(0, 26rem) auto;
-    align-items: center;
+    align-items: start;
     gap: var(--space-2);
-    height: calc(var(--square) * 2);
+    min-height: calc(var(--square) * 2);
     padding: 0;
   }
 
   /* Opaque, so the ruling behind the sheet does not read through the writing. */
-  .label,
-  .value {
+  .label {
     border-color: var(--rule);
     background: #fff;
-  }
-
-  .label {
     font-weight: 600;
     color: var(--ink-muted);
   }
 
   .label::placeholder,
-  .value::placeholder {
+  .value-input::placeholder {
     color: var(--ink-faint);
   }
 
@@ -135,7 +137,60 @@
     border-color: var(--accent);
   }
 
+  /* The span is not a form control, so it carries the box the input above it
+     gets for free from app.css. Mirrors CellField's own grid trick: the
+     hidden ::after copy of the value sets the box's height and the textarea
+     sits on top of it, in the same grid cell, so the value grows instead of
+     scrolling or clipping. */
+  .value {
+    display: grid;
+    min-width: 0;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+
+  .value::after {
+    content: attr(data-value) ' ';
+    visibility: hidden;
+  }
+
+  .value > .value-input,
+  .value::after {
+    grid-area: 1 / 1;
+    min-width: 0;
+    font: inherit;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .value-input {
+    width: 100%;
+    border: none;
+    padding: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    resize: none;
+    overflow: hidden;
+  }
+
+  .value-input:focus-visible {
+    outline: none;
+  }
+
+  /* The ring belongs on the box, not the borderless textarea inside it. */
+  .value:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  /* The label already gets 0.25rem from app.css's input default; the drag
+     handle is a span and needs its own to line up with the value's first
+     line. */
   .drag-handle {
+    padding-top: 0.25rem;
     display: flex;
     justify-content: center;
     cursor: grab;
@@ -181,15 +236,24 @@
     }
 
     .field {
-      grid-template-columns: auto 1fr auto;
+      grid-template-columns: 9rem 1fr auto;
       gap: 0 3mm;
-      height: auto;
+      min-height: auto;
       padding: 0;
     }
 
-    .label,
+    /* Kept in the layout so the value stays in the fixed value column;
+       invisible rather than gone, so a value-only field still lines up
+       with the labelled fields around it. */
+    .label.unlabelled {
+      visibility: hidden;
+    }
+
     .value {
-      width: auto;
+      width: 100%;
+      padding: 0;
+      border: none;
+      background: none;
     }
   }
 </style>

@@ -28,6 +28,32 @@ describe('HeaderFieldsEditor', () => {
     expect(plan.headerFields[0]).toMatchObject({ label: 'Datum', value: '24.08.2026' })
   })
 
+  it('holds the value in a growing textarea, newline included', async () => {
+    const plan = renderEditor()
+
+    const value = screen.getByLabelText('Inhalt')
+    expect(value.tagName).toBe('TEXTAREA')
+
+    // No keydown handler here, unlike CellField: Enter must stay a plain
+    // newline, never a step to the next field.
+    expect(await fireEvent.keyDown(value, { key: 'Enter' })).toBe(true)
+
+    await fireEvent.input(value, { target: { value: 'Saal A\nEingang Nord' } })
+
+    expect(plan.headerFields[0].value).toBe('Saal A\nEingang Nord')
+  })
+
+  it('marks an unlabelled field so print can hide the blank label', () => {
+    const named = createHeaderField('Ort')
+    const unnamed = createHeaderField('')
+    unnamed.value = 'Nebeneingang'
+    renderEditor([named, unnamed])
+
+    const labels = screen.getAllByLabelText('Bezeichnung')
+    expect(labels[0].classList.contains('unlabelled')).toBe(false)
+    expect(labels[1].classList.contains('unlabelled')).toBe(true)
+  })
+
   it('removes a field', async () => {
     const plan = renderEditor()
 
